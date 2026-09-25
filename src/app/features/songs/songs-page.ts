@@ -66,8 +66,10 @@ export class SongsPage {
         choice === 'delete' &&
         (await this.dialog.confirm('Supprimer ce morceau ?', song.title, 'Supprimer', true))
       ) {
-        await this.store.deleteSong(song.id);
-        this.toast.show('Morceau supprimé');
+        const done = await this.store.deleteSong(song.id);
+        this.toast.show(
+          done ? 'Morceau supprimé' : "Une voix vient d'y être classée : le morceau est gardé",
+        );
       }
     } catch (e) {
       console.warn(e);

@@ -102,7 +102,7 @@ export function createDemoBackend(now = Date.now(), delay = 150): Backend {
   return {
     demo: true,
     async join() {
-      return true;
+      return 'ok';
     },
     onSongs(cb) {
       subs.songs.push(cb);
@@ -149,17 +149,20 @@ export function createDemoBackend(now = Date.now(), delay = 150): Backend {
       return later(() => {
         const s = songs.get(songId);
         const v = s?.voices[voice];
-        if (!s || !v || v.hash !== hash) return;
+        if (!s || !v || v.hash !== hash) return false;
         delete s.voices[voice];
         const f = files.get(v.hash);
         if (f) Object.assign(f, { status: 'inbox', createdAt: Date.now(), song: undefined, voice: undefined });
         emit();
+        return true;
       });
     },
     removeInbox(hash) {
       return later(() => {
+        if (files.get(hash)?.status !== 'inbox') return false;
         forget(hash);
         emit();
+        return true;
       });
     },
     renameSong(id, title) {
@@ -171,8 +174,11 @@ export function createDemoBackend(now = Date.now(), delay = 150): Backend {
     },
     deleteSong(id) {
       return later(() => {
+        const s = songs.get(id);
+        if (!s || Object.keys(s.voices).length) return false;
         songs.delete(id);
         emit();
+        return true;
       });
     },
     async url(hash) {

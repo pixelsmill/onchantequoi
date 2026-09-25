@@ -1,4 +1,7 @@
-<a class="skip-link" href="#contenu">Aller au contenu</a>
+<!-- (click) : avec <base href="/">, un simple #contenu rechargerait l'app -->
+<a class="skip-link" href="#contenu" (click)="$event.preventDefault(); main.focus()"
+  >Aller au contenu</a
+>
 
 <header class="top">
   <div class="top-row">
@@ -21,7 +24,7 @@
       <a
         routerLink="/"
         routerLinkActive="active"
-        [routerLinkActiveOptions]="{ exact: true }"
+        [routerLinkActiveOptions]="exactPath"
         ariaCurrentWhenActive="page"
         >Morceaux</a
       >
@@ -49,7 +52,7 @@
   </p>
 }
 
-<main id="contenu" tabindex="-1">
+<main #main id="contenu" tabindex="-1">
   @switch (store.status()) {
     @case ('ready') {
       <router-outlet />

@@ -39,6 +39,7 @@ export class InboxItem {
   private readonly dialog = inject(DialogService);
   private readonly toast = inject(ToastService);
   private readonly injector = inject(Injector);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly queryInput = viewChild<ElementRef<HTMLInputElement>>('q');
 
   protected readonly voices = VOICES;
@@ -140,6 +141,15 @@ export class InboxItem {
     this.toast.show(`Classé : ${title} · ${VOICE_NAME[d.voice]}`);
     if (this.player.track()?.hash === f.hash) this.player.stop();
     this.drafts.classified(f.hash, res.songId, newTitle);
+    this.focusNext();
+  }
+
+  /** L'audio va disparaître de la liste : le focus passe au suivant (clavier, lecteur d'écran) */
+  private focusNext(): void {
+    const li = this.host.nativeElement.closest('li');
+    const next = li?.nextElementSibling ?? li?.previousElementSibling;
+    const target = next?.querySelector<HTMLElement>('button') ?? this.host.nativeElement.closest('main');
+    setTimeout(() => target?.focus({ preventScroll: true }), 50);
   }
 
   protected async remove(): Promise<void> {
@@ -153,9 +163,13 @@ export class InboxItem {
     const f = this.file();
     if (this.player.track()?.hash === f.hash) this.player.stop();
     try {
-      await this.store.removeInbox(f.hash);
+      if (!(await this.store.removeInbox(f.hash))) {
+        this.toast.show("Déjà classé par quelqu'un d'autre : rien n'a été supprimé");
+        return;
+      }
       this.drafts.remove(f.hash);
       this.toast.show('Audio supprimé');
+      this.focusNext();
     } catch (e) {
       console.warn(e);
       this.toast.show('Oups, réessayez');

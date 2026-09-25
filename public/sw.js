@@ -10,23 +10,29 @@ self.addEventListener('fetch', (event) => {
   event.stopImmediatePropagation();
   event.respondWith(
     (async () => {
-      // On range les fichiers, puis on ouvre l'app qui les enverra (UploadService.takeShared)
-      const form = await event.request.formData();
-      const files = form.getAll('audio').filter((f) => f && typeof f !== 'string' && f.size);
-      const cache = await caches.open('shared');
-      let i = 0;
-      for (const f of files) {
-        await cache.put(
-          `/shared/${Date.now()}-${i++}`,
-          new Response(f, {
-            headers: {
-              'content-type': f.type || 'application/octet-stream',
-              'x-name': encodeURIComponent(f.name || 'audio'),
-            },
-          }),
-        );
+      // On range les fichiers, puis on ouvre l'app qui les enverra (UploadService.takeShared).
+      // Quoi qu'il arrive, on ouvre l'app : jamais de page d'erreur réseau.
+      try {
+        const form = await event.request.formData();
+        const files = form.getAll('audio').filter((f) => f && typeof f !== 'string' && f.size);
+        const cache = await caches.open('shared');
+        let i = 0;
+        for (const f of files) {
+          await cache.put(
+            `/shared/${Date.now()}-${i++}`,
+            new Response(f, {
+              headers: {
+                'content-type': f.type || 'application/octet-stream',
+                'x-name': encodeURIComponent(f.name || 'audio'),
+              },
+            }),
+          );
+        }
+        return Response.redirect('/a-classer?partage=1', 303);
+      } catch (e) {
+        console.warn('partage', e);
+        return Response.redirect('/a-classer?partage=echec', 303);
       }
-      return Response.redirect('/a-classer?partage=1', 303);
     })(),
   );
 });

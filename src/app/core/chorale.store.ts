@@ -5,10 +5,12 @@ import { keyFromText, sortSongs } from './utils';
 
 export const KEY_STORE = 'chorale-cle';
 const EMU_STORE = 'chorale-emu';
+const DEMO_STORE = 'chorale-demo';
 
 const INVALID =
   "Ce lien n'est pas (ou plus) valide. Demandez le lien à jour dans le groupe WhatsApp.";
-const OFFLINE = 'Pas de connexion internet. Réessayez une fois connecté.';
+const NETWORK =
+  'Impossible de vérifier le lien pour le moment : vérifiez la connexion internet, puis réessayez.';
 
 /** Projet fictif des émulateurs locaux (npm run emulators, puis http://localhost:4200/?emu) */
 const EMULATOR_CONFIG = {
@@ -85,7 +87,13 @@ export class ChoraleStore {
     // ?emu est retenu pour la session (les liens internes ne gardent pas les paramètres)
     const emulators = local && (params.has('emu') || readSession(EMU_STORE) === '1');
     if (emulators) writeSession(EMU_STORE, '1');
-    const demo = !emulators && (firebaseConfig.apiKey === 'REMPLACER' || params.has('demo'));
+    // ?demo aussi, pour ne pas basculer sur les vraies données au rechargement
+    if (params.has('demo')) writeSession(DEMO_STORE, '1');
+    const demo =
+      !emulators &&
+      (firebaseConfig.apiKey === 'REMPLACER' ||
+        params.has('demo') ||
+        readSession(DEMO_STORE) === '1');
     try {
       if (demo) {
         const { createDemoBackend } = await import('./demo-backend');
@@ -108,23 +116,29 @@ export class ChoraleStore {
       this.status.set('gate');
       return;
     }
-    await this.tryKey(k);
+    await this.tryKey(k, false);
   }
 
   /** Lien ou clé saisi(e) sur l'écran d'accueil */
   async submitKey(text: string): Promise<boolean> {
     const k = keyFromText(text);
-    return k ? this.tryKey(k) : false;
+    return k ? this.tryKey(k, true) : false;
   }
 
-  private async tryKey(k: string): Promise<boolean> {
-    if (await this.api.join(k)) {
+  private async tryKey(k: string, typed: boolean): Promise<boolean> {
+    const result = await this.api.join(k);
+    if (result === 'ok') {
       writeStore(KEY_STORE, k);
       this.key.set(k);
       this.start();
       return true;
     }
-    this.gateMessage.set(globalThis.navigator?.onLine === false ? OFFLINE : INVALID);
+    if (result === 'network' && !typed) {
+      // Au démarrage : écran « Connexion impossible » avec « Réessayer » (la clé est gardée)
+      this.status.set('error');
+      return false;
+    }
+    this.gateMessage.set(result === 'network' ? NETWORK : INVALID);
     this.status.set('gate');
     return false;
   }
@@ -188,11 +202,11 @@ export class ChoraleStore {
     return this.api.classify(req);
   }
 
-  unclassify(songId: string, voice: VoiceKey, hash: string): Promise<void> {
+  unclassify(songId: string, voice: VoiceKey, hash: string): Promise<boolean> {
     return this.api.unclassify(songId, voice, hash);
   }
 
-  removeInbox(hash: string): Promise<void> {
+  removeInbox(hash: string): Promise<boolean> {
     return this.api.removeInbox(hash);
   }
 
@@ -200,11 +214,11 @@ export class ChoraleStore {
     return this.api.renameSong(songId, title);
   }
 
-  deleteSong(songId: string): Promise<void> {
+  deleteSong(songId: string): Promise<boolean> {
     return this.api.deleteSong(songId);
   }
 
-  url(hash: string): Promise<string> {
-    return this.api.url(hash);
+  url(hash: string, refresh = false): Promise<string> {
+    return this.api.url(hash, refresh);
   }
 }

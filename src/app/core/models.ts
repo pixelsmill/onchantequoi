@@ -56,11 +56,14 @@ export type ClassifyResult =
   | { ok: true; songId: string }
   | { ok: false; reason: 'already' | 'error' };
 
+/** ok = accès ouvert ; denied = clé inconnue ou supprimée ; network = impossible de vérifier */
+export type JoinResult = 'ok' | 'denied' | 'network';
+
 /** Accès aux données : même interface pour Firebase et pour le mode démo */
 export interface Backend {
   readonly demo: boolean;
-  /** Rejoint la chorale avec la clé. Renvoie true si l'accès est accordé. */
-  join(key: string): Promise<boolean>;
+  /** Rejoint la chorale avec la clé */
+  join(key: string): Promise<JoinResult>;
   onSongs(cb: (songs: Song[]) => void, onError: (e: unknown) => void): () => void;
   onInbox(cb: (files: InboxFile[]) => void, onError: (e: unknown) => void): () => void;
   exists(hash: string): Promise<boolean>;
@@ -73,10 +76,13 @@ export interface Backend {
   ): Promise<void>;
   /** Classe un audio (le premier qui classe gagne). Remplace l'ancien enregistrement de la même voix. */
   classify(req: ClassifyRequest): Promise<ClassifyResult>;
-  /** « Mal classé ? » : remet l'audio dans À classer (s'il occupe toujours cette voix) */
-  unclassify(songId: string, voice: VoiceKey, hash: string): Promise<void>;
-  removeInbox(hash: string): Promise<void>;
+  /** « Mal classé ? » : remet l'audio dans À classer. false s'il n'occupe plus cette voix. */
+  unclassify(songId: string, voice: VoiceKey, hash: string): Promise<boolean>;
+  /** Supprime un audio encore à classer. false s'il a été classé entre-temps. */
+  removeInbox(hash: string): Promise<boolean>;
   renameSong(songId: string, title: string): Promise<void>;
-  deleteSong(songId: string): Promise<void>;
-  url(hash: string): Promise<string>;
+  /** Supprime un morceau vide. false s'il a reçu une voix entre-temps. */
+  deleteSong(songId: string): Promise<boolean>;
+  /** Adresse de lecture ; refresh pour ignorer le cache (jeton périmé) */
+  url(hash: string, refresh?: boolean): Promise<string>;
 }

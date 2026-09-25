@@ -162,8 +162,10 @@ export class PlayerBar {
     if (!ok) return;
     this.player.stop();
     try {
-      await this.store.unclassify(t.songId, t.voice, t.hash);
-      this.toast.show('Remis dans « À classer »');
+      const done = await this.store.unclassify(t.songId, t.voice, t.hash);
+      this.toast.show(
+        done ? 'Remis dans « À classer »' : "Déjà modifié par quelqu'un d'autre : rien à faire",
+      );
     } catch (e) {
       console.warn(e);
       this.toast.show('Oups, réessayez');

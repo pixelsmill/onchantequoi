@@ -44,15 +44,20 @@ export class InboxDrafts {
     return last && this.store.songById(last) ? { ...d, songId: last } : d;
   }
 
+  /**
+   * Dès qu'on touche un audio, on fige ce qui est affiché (morceau pré-rempli compris) :
+   * classer un autre audio ne doit pas changer le morceau sous les yeux de l'utilisateur.
+   */
   update(hash: string, patch: Partial<Draft>): void {
-    this.drafts.update((all) => ({ ...all, [hash]: { ...(all[hash] ?? EMPTY), ...patch } }));
+    const shown = this.draft(hash);
+    this.drafts.update((all) => ({ ...all, [hash]: { ...shown, ...patch } }));
   }
 
   remove(hash: string): void {
     this.drafts.update(({ [hash]: _gone, ...rest }) => rest);
   }
 
-  /** Après un classement : ce morceau devient le choix par défaut des autres audios */
+  /** Après un classement : ce morceau devient le choix par défaut des audios pas encore touchés */
   classified(hash: string, songId: string, newTitle: string | null): void {
     this.remove(hash);
     this.lastSongId.set(songId);

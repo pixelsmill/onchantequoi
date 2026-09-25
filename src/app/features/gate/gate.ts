@@ -9,7 +9,7 @@ import { keyFromText } from '../../core/utils';
   template: `
     <div class="gate card">
       <h2>Bienvenue</h2>
-      <p>
+      <p aria-live="polite">
         {{
           store.gateMessage() ||
             'Ouvrez le lien de la chorale reçu sur WhatsApp, ou collez-le ici :'

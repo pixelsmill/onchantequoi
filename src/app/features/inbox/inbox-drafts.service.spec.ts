@@ -29,6 +29,14 @@ describe('InboxDrafts', () => {
     expect(drafts.draft('c').songId).toBe('s2');
   });
 
+  it('le morceau pré-rempli est figé dès qu’on touche l’audio', () => {
+    drafts.classified('a', 's1', null);
+    expect(drafts.draft('b').songId).toBe('s1');
+    drafts.update('b', { voice: 'A' }); // l'utilisateur voit « Ave Verum Corpus » et touche Alto
+    drafts.classified('c', 's2', null); // puis classe un autre audio ailleurs
+    expect(drafts.draft('b')).toMatchObject({ voice: 'A', songId: 's1' });
+  });
+
   it('un choix explicite ou un morceau retiré n’est pas écrasé', () => {
     drafts.update('b', { songId: 's1' });
     drafts.update('c', { cleared: true });

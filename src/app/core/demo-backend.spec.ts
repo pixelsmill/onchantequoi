@@ -60,9 +60,9 @@ describe('createDemoBackend', () => {
 
   it('« Mal classé ? » remet l’audio à classer, seulement s’il occupe encore la voix', async () => {
     const hash = state.songs.find((s) => s.id === 's2')?.voices.H?.hash as string;
-    await b.unclassify('s2', 'H', 'autre-hash');
+    expect(await b.unclassify('s2', 'H', 'autre-hash')).toBe(false);
     expect(state.songs.find((s) => s.id === 's2')?.voices.H).toBeTruthy();
-    await b.unclassify('s2', 'H', hash);
+    expect(await b.unclassify('s2', 'H', hash)).toBe(true);
     expect(state.songs.find((s) => s.id === 's2')?.voices.H).toBeUndefined();
     expect(state.inbox.some((f) => f.hash === hash)).toBe(true);
   });
@@ -73,14 +73,25 @@ describe('createDemoBackend', () => {
     await b.upload(file, 'AUD-1.m4a', 'abc', 'audio/mp4');
     expect(await b.exists('abc')).toBe(true);
     expect(state.inbox.find((f) => f.hash === 'abc')?.name).toBe('AUD-1.m4a');
-    await b.removeInbox('abc');
+    expect(await b.removeInbox('abc')).toBe(true);
     expect(await b.exists('abc')).toBe(false);
+  });
+
+  it('ne supprime pas un audio classé entre-temps, ni un morceau qui a des voix', async () => {
+    const [first] = state.inbox;
+    await b.classify({ hash: first.hash, voice: 'A', songId: 's3', newTitle: null });
+    expect(await b.removeInbox(first.hash)).toBe(false);
+    expect(await b.exists(first.hash)).toBe(true);
+    expect(await b.deleteSong('s3')).toBe(false);
+    expect(state.songs.some((s) => s.id === 's3')).toBe(true);
   });
 
   it('renomme et supprime un morceau', async () => {
     await b.renameSong('s3', '  Hallelujah  ');
     expect(state.songs.find((s) => s.id === 's3')?.title).toBe('Hallelujah');
-    await b.deleteSong('s3');
+    const s3 = state.songs.find((s) => s.id === 's3') as Song;
+    for (const [v, r] of Object.entries(s3.voices)) await b.unclassify('s3', v as 'S', r!.hash);
+    expect(await b.deleteSong('s3')).toBe(true);
     expect(state.songs.find((s) => s.id === 's3')).toBeUndefined();
   });
 

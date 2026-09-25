@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { TablerIconComponent } from '@tabler/icons-angular';
 import { shortcutUrl } from '../../config';
 import { ChoraleStore } from '../../core/chorale.store';
-import { PwaService } from '../../core/pwa.service';
+import { Platform, PwaService } from '../../core/pwa.service';
 import { ToastService } from '../../core/toast.service';
 
 /** Aide : installer l'app (Android, iPhone), raccourci iPhone, dépôt depuis un ordinateur */
@@ -32,9 +32,11 @@ export class InstallPage {
     () => `${this.origin}/api/depot?cle=${this.store.key() ?? 'CLÉ-DE-LA-CHORALE'}`,
   );
 
-  protected order(platform: string): number {
-    return platform === this.pwa.platform ? 0 : 1;
-  }
+  /** L'appareil utilisé d'abord (ordre visuel = ordre de lecture) */
+  protected readonly platforms: Platform[] = [
+    this.pwa.platform,
+    ...(['ios', 'android', 'desktop'] as const).filter((p) => p !== this.pwa.platform),
+  ];
 
   protected async copy(text: string): Promise<void> {
     try {

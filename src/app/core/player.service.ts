@@ -1,4 +1,4 @@
-import { computed, DOCUMENT, inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { choirName } from '../config';
 import { ChoraleStore } from './chorale.store';
 import { VOICE_NAME, VoiceKey } from './models';
@@ -41,7 +41,6 @@ function silentWav(): Blob {
 export class PlayerService {
   private readonly store = inject(ChoraleStore);
   private readonly toast = inject(ToastService);
-  private readonly doc = inject(DOCUMENT);
   private readonly audio: HTMLAudioElement | null =
     typeof Audio === 'undefined' ? null : new Audio();
   /** Adresses déjà connues : la lecture démarre dans le geste même (exigé par iOS) */
@@ -72,14 +71,6 @@ export class PlayerService {
     const dur = () => active() && this.duration.set(Number.isFinite(a.duration) ? a.duration : 0);
     a.addEventListener('durationchange', dur);
     a.addEventListener('loadedmetadata', dur);
-    // Débloque l'audio au premier geste. Pour un doigt, seuls touchend et click comptent
-    // comme geste sur iOS (pas pointerdown) ; en capture, avant le bouton touché.
-    const gestures = ['touchend', 'click', 'keydown'];
-    const unlock = () => {
-      this.unlock();
-      gestures.forEach((g) => this.doc.removeEventListener(g, unlock, true));
-    };
-    gestures.forEach((g) => this.doc.addEventListener(g, unlock, true));
     this.setupMediaSession();
   }
 
@@ -101,6 +92,7 @@ export class PlayerService {
       .catch(() => undefined);
   }
 
+  /** À appeler dans le geste de l'utilisateur (toucher d'un bouton de lecture) */
   async play(t: Track): Promise<void> {
     const a = this.audio;
     if (!a) return;
@@ -108,20 +100,39 @@ export class PlayerService {
     this.time.set(0);
     this.duration.set(0);
     this.updateMediaSession(t);
+    // iOS n'autorise la lecture que dans le geste : si l'adresse n'est pas encore connue,
+    // on lance tout de suite un silence sur le même élément pour le « débloquer »
+    if (!this.known.has(t.hash)) this.unlock(a);
     try {
-      const url = this.known.get(t.hash) ?? (await this.store.url(t.hash));
-      this.known.set(t.hash, url);
-      if (this.track() !== t) return; // autre choix entre-temps
-      a.src = url;
-      a.loop = this.loop();
-      a.defaultPlaybackRate = a.playbackRate = this.speed();
-      await a.play();
+      await this.start(a, t, false);
     } catch (e) {
       if (e instanceof DOMException && e.name === 'AbortError') return;
-      console.warn(e);
-      this.playing.set(false);
-      this.toast.show('Lecture impossible sur ce téléphone');
+      try {
+        // Adresse périmée (fichier redéposé) : une seconde chance avec une adresse neuve
+        await this.start(a, t, true);
+      } catch (e2) {
+        if (e2 instanceof DOMException && e2.name === 'AbortError') return;
+        console.warn(e2);
+        if (this.track() !== t) return;
+        this.playing.set(false);
+        this.toast.show(
+          globalThis.navigator?.onLine === false
+            ? 'Pas de connexion : impossible d’écouter pour le moment'
+            : 'Lecture impossible sur ce téléphone',
+        );
+      }
     }
+  }
+
+  private async start(a: HTMLAudioElement, t: Track, refresh: boolean): Promise<void> {
+    if (refresh) this.known.delete(t.hash);
+    const url = this.known.get(t.hash) ?? (await this.store.url(t.hash, refresh));
+    this.known.set(t.hash, url);
+    if (this.track() !== t) return; // autre choix entre-temps
+    a.src = url;
+    a.loop = this.loop();
+    a.defaultPlaybackRate = a.playbackRate = this.speed();
+    await a.play();
   }
 
   toggle(): void {
@@ -169,14 +180,13 @@ export class PlayerService {
     }
   }
 
-  private unlock(): void {
-    const a = this.audio;
-    if (!a || this.silent) return;
-    this.silent = URL.createObjectURL(silentWav());
-    a.src = this.silent;
+  private unlock(a: HTMLAudioElement): void {
+    this.silent ||= URL.createObjectURL(silentWav());
+    const silent = this.silent;
+    a.src = silent;
     a.play()
       .then(() => {
-        if (a.src === this.silent) a.pause();
+        if (a.src === silent) a.pause();
       })
       .catch(() => undefined);
   }

@@ -4,7 +4,6 @@ import { connectAuthEmulator, getAuth, signInAnonymously, User } from 'firebase/
 import {
   collection,
   connectFirestoreEmulator,
-  deleteDoc,
   deleteField,
   doc,
   DocumentData,
@@ -33,7 +32,7 @@ import {
   ref,
   uploadBytesResumable,
 } from 'firebase/storage';
-import { Backend, ClassifyResult, InboxFile, Recording, Song } from './models';
+import { Backend, ClassifyResult, InboxFile, JoinResult, Recording, Song } from './models';
 
 export interface FirebaseBackendOptions {
   /** Émulateurs locaux (firebase emulators:start), pour le développement */
@@ -105,7 +104,7 @@ export async function createFirebaseBackend(
   return {
     demo: false,
 
-    async join(key) {
+    async join(key): Promise<JoinResult> {
       try {
         const user = await withTimeout(currentUser(), 20_000);
         const member = doc(db, 'members', user.uid);
@@ -113,13 +112,14 @@ export async function createFirebaseBackend(
         if (snap.exists() && snap.data()['key'] === key) {
           // La clé a pu être supprimée depuis : lecture test
           await getDocs(query(collection(db, 'songs'), limit(1)));
-          return true;
+          return 'ok';
         }
         await withTimeout(setDoc(member, { key, at: serverTimestamp() }), 20_000);
-        return true;
+        return 'ok';
       } catch (e) {
         console.warn('join', e);
-        return false;
+        // Seul un refus des règles veut dire « lien invalide » ; le reste = réseau
+        return (e as { code?: string } | null)?.code === 'permission-denied' ? 'denied' : 'network';
       }
     },
 
@@ -214,14 +214,14 @@ export async function createFirebaseBackend(
       return { ok: true, songId: id };
     },
 
-    async unclassify(songId, voice, hash) {
-      await runTransaction(db, async (tx) => {
+    unclassify(songId, voice, hash) {
+      return runTransaction(db, async (tx) => {
         const songRef = doc(db, 'songs', songId);
         const s = await tx.get(songRef);
-        if (!s.exists()) return;
+        if (!s.exists()) return false;
         const song = s.data();
         const v = song['voices']?.[voice] as Recording | undefined;
-        if (!v || v.hash !== hash) return; // remplacé entre-temps
+        if (!v || v.hash !== hash) return false; // remplacé entre-temps
         const voices = { ...song['voices'] };
         delete voices[voice];
         tx.set(songRef, { ...song, voices });
@@ -230,23 +230,41 @@ export async function createFirebaseBackend(
           { status: 'inbox', createdAt: serverTimestamp(), song: deleteField(), voice: deleteField() },
           { merge: true },
         );
+        return true;
       });
     },
 
     async removeInbox(hash) {
-      await deleteDoc(fileDoc(hash));
-      deleteObject(audioRef(hash)).catch(() => undefined);
+      // Seulement s'il est encore à classer (quelqu'un a pu le classer entre-temps)
+      const removed = await runTransaction(db, async (tx) => {
+        const ref = fileDoc(hash);
+        const snap = await tx.get(ref);
+        if (!snap.exists() || snap.data()['status'] !== 'inbox') return false;
+        tx.delete(ref);
+        return true;
+      });
+      if (removed) deleteObject(audioRef(hash)).catch(() => undefined);
+      return removed;
     },
 
     async renameSong(songId, title) {
       await updateDoc(doc(db, 'songs', songId), { title: title.trim() });
     },
 
-    async deleteSong(songId) {
-      await deleteDoc(doc(db, 'songs', songId));
+    deleteSong(songId) {
+      // Seulement s'il est toujours vide (une voix a pu être classée entre-temps)
+      return runTransaction(db, async (tx) => {
+        const ref = doc(db, 'songs', songId);
+        const snap = await tx.get(ref);
+        if (!snap.exists()) return true;
+        if (Object.keys(snap.data()['voices'] ?? {}).length) return false;
+        tx.delete(ref);
+        return true;
+      });
     },
 
-    url(hash) {
+    url(hash, refresh = false) {
+      if (refresh) urls.delete(hash);
       let u = urls.get(hash);
       if (!u) {
         u = getDownloadURL(audioRef(hash));
