@@ -11,6 +11,8 @@
     "test:functions": "npm --prefix functions test",
     "test:rules": "npm --prefix rules-tests test",
     "test:depot": "npm --prefix functions run test:e2e",
+    "install:functions": "cd functions && npm install",
+    "install:rules-tests": "cd rules-tests && npm install",
     "emulators": "firebase emulators:start --project demo-chorale",
     "deploy": "ng build && firebase deploy",
     "deploy:site": "ng build && firebase deploy --only hosting",

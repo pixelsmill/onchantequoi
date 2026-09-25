@@ -47,7 +47,7 @@ Une fois en ligne, on peut toujours montrer la démo avec `https://<projet>.web.
 8. Dans `src/app/config.ts`, passez `demoOnly` à `false`, puis déployez :
    ```bash
    npx firebase login                 # une seule fois (déjà fait sur ce PC)
-   npm --prefix functions install     # dépendances de la fonction « depot »
+   npm run install:functions          # dépendances de la fonction « depot » (déjà fait sur ce PC)
    npm run deploy                     # = ng build + firebase deploy
    ```
    La CLI Firebase fait partie du projet (`firebase-tools` dans les devDependencies) : pas besoin de l'installer globalement.
@@ -151,7 +151,7 @@ $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"; $env:Path = "$en
 export JAVA_HOME="/c/Program Files/Android/Android Studio/jbr"; export PATH="$JAVA_HOME/bin:$PATH"
 ```
 
-Avant la première fois : `npm --prefix functions install` et `npm --prefix rules-tests install`. Au premier lancement, les émulateurs se téléchargent (quelques dizaines de Mo).
+Avant la première fois : `npm run install:functions` et `npm run install:rules-tests` (déjà fait sur ce PC). N'utilisez pas `npm --prefix functions install` : lancé depuis la racine, npm ajoute le projet entier comme dépendance de la fonction. Au premier lancement, les émulateurs se téléchargent (quelques dizaines de Mo).
 Pour savoir quelle ligne des règles a refusé une requête : `DEBUG_RULES=1 npm run test:rules`. Si Java affiche « Unable to establish loopback connection », ajoutez `JAVA_TOOL_OPTIONS=-Djdk.net.unixdomain.tmpdir=C:\Temp` (dossier existant, chemin court).
 
 ---

@@ -15,7 +15,6 @@
   },
   "dependencies": {
     "busboy": "^1.6.0",
-    "chorale": "file:..",
     "firebase-admin": "^14.5.0",
     "firebase-functions": "^7.4.0"
   }
