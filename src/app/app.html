@@ -1,0 +1,93 @@
+<a class="skip-link" href="#contenu">Aller au contenu</a>
+
+<header class="top">
+  <div class="top-row">
+    <h1>{{ store.choirName }}</h1>
+    @if (store.status() === 'ready') {
+      <a
+        class="icon-btn"
+        routerLink="/installer"
+        routerLinkActive="active"
+        ariaCurrentWhenActive="page"
+        aria-label="Installer sur mon téléphone"
+        title="Installer sur mon téléphone"
+      >
+        <tabler-icon icon="device-mobile" [size]="22" />
+      </a>
+    }
+  </div>
+  @if (store.status() === 'ready') {
+    <nav class="tabs" aria-label="Sections">
+      <a
+        routerLink="/"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        ariaCurrentWhenActive="page"
+        >Morceaux</a
+      >
+      <a routerLink="/a-classer" routerLinkActive="active" ariaCurrentWhenActive="page">
+        À classer
+        @if (store.inbox().length; as n) {
+          <span class="badge"
+            ><span class="visually-hidden">(</span>{{ n }}<span class="visually-hidden">
+              en attente)</span
+            ></span
+          >
+        }
+      </a>
+    </nav>
+  }
+</header>
+
+@if (store.demo()) {
+  <p class="banner">Mode démo : données fictives, rien n'est enregistré.</p>
+}
+@if (pwa.updateReady()) {
+  <p class="banner">
+    Une nouvelle version de l'app est prête.
+    <button type="button" class="link-btn" (click)="pwa.reload()">Recharger</button>
+  </p>
+}
+
+<main id="contenu" tabindex="-1">
+  @switch (store.status()) {
+    @case ('ready') {
+      <router-outlet />
+    }
+    @case ('gate') {
+      <app-gate />
+    }
+    @case ('error') {
+      <div class="empty">
+        <strong>Connexion impossible</strong>
+        Vérifiez le réseau, puis réessayez.
+        <p><button type="button" class="primary" (click)="pwa.reload()">Réessayer</button></p>
+      </div>
+    }
+    @default {
+      <p class="empty" aria-live="polite">Chargement…</p>
+    }
+  }
+</main>
+
+@if (store.status() === 'ready') {
+  <button type="button" class="fab" (click)="fileInput.click()">
+    <tabler-icon icon="plus" [size]="22" [stroke]="2.4" />
+    <span>Déposer</span>
+  </button>
+  <input
+    #fileInput
+    class="visually-hidden"
+    type="file"
+    multiple
+    tabindex="-1"
+    aria-hidden="true"
+    [accept]="accept"
+    (change)="onFiles(fileInput)"
+  />
+  <app-drop-zone />
+}
+
+<app-player-bar />
+<app-dialog-host />
+<app-toast />

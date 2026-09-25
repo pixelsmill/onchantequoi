@@ -1,0 +1,30 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Même règle que Firestore : membre avec une clé qui existe encore.
+    // (2 documents Firestore lus au plus par requête : c'est la limite des règles Storage)
+    function isMember() {
+      return request.auth != null && hasLiveKey(request.auth.uid);
+    }
+    function hasLiveKey(uid) {
+      let m = firestore.get(/databases/(default)/documents/members/$(uid));
+      return m != null && firestore.exists(/databases/(default)/documents/keys/$(m.data.key));
+    }
+
+    // Audios : nom = empreinte SHA-256 du fichier (64 caractères hexadécimaux), moins de 40 Mo.
+    // Les .mp4 audio arrivent souvent en video/mp4 : on accepte audio/* et video/*.
+    match /audio/{hash} {
+      allow read, delete: if isMember();
+      allow create, update: if isMember()
+        && hash.matches('^[0-9a-f]{64}$')
+        && request.resource.size > 0
+        && request.resource.size < 40 * 1024 * 1024
+        && request.resource.contentType.lower().matches('(audio|video)/.+|application/(ogg|octet-stream)');
+    }
+
+    match /{other=**} {
+      allow read, write: if false;
+    }
+  }
+}

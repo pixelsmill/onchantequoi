@@ -1,0 +1,45 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Un téléphone est "membre" s'il a rejoint avec une clé qui existe encore.
+    // Supprimer une clé dans /keys coupe l'accès à tous ceux qui l'ont utilisée.
+    function isMember() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/members/$(request.auth.uid))
+        && exists(/databases/$(database)/documents/keys/$(
+             get(/databases/$(database)/documents/members/$(request.auth.uid)).data.key));
+    }
+
+    // Les clés : jamais lisibles ni modifiables depuis l'app (gérées dans la console).
+    match /keys/{key} {
+      allow read, write: if false;
+    }
+
+    // Rejoindre : on ne peut écrire que sa propre fiche, avec une clé valide.
+    match /members/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['key', 'at'])
+        && request.resource.data.key is string
+        && exists(/databases/$(database)/documents/keys/$(request.resource.data.key));
+      allow delete: if false;
+    }
+
+    // Répertoire des morceaux
+    match /songs/{songId} {
+      allow read, delete: if isMember();
+      allow create, update: if isMember()
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 120;
+    }
+
+    // Fichiers audio reçus (id = empreinte SHA-256 du fichier, évite les doublons)
+    match /files/{hash} {
+      allow read, delete: if isMember();
+      allow create, update: if isMember()
+        && request.resource.data.status in ['inbox', 'classified'];
+    }
+  }
+}

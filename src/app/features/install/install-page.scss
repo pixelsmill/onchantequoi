@@ -1,0 +1,92 @@
+.page {
+  display: flex;
+  flex-direction: column;
+}
+
+.page-title {
+  margin: 8px 0 14px;
+  font-size: 20px;
+}
+
+.ok {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--T-soft);
+  color: var(--T);
+  font-weight: 600;
+}
+
+summary {
+  font-weight: 700;
+  font-size: 17px;
+  cursor: pointer;
+  padding: 2px 0;
+}
+
+details.sub {
+  margin-top: 16px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+
+  summary {
+    font-size: 15px;
+    color: var(--accent);
+  }
+}
+
+h3 {
+  font-size: 15px;
+  margin: 16px 0 6px;
+}
+
+ol {
+  margin: 0 0 10px;
+  padding-left: 22px;
+
+  li {
+    margin: 4px 0;
+  }
+}
+
+p {
+  margin: 0 0 10px;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.secondary,
+.primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.button {
+  text-decoration: none;
+  justify-content: center;
+}
+
+.copy-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 6px 6px 12px;
+  border-radius: 10px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+
+  code {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: 13px;
+  }
+}

@@ -1,0 +1,95 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Un téléphone est « membre » s'il a rejoint avec une clé qui existe encore.
+    // Supprimer une clé dans /keys coupe donc l'accès à tous ceux qui l'ont utilisée.
+    function isMember() {
+      return request.auth != null && hasLiveKey(request.auth.uid);
+    }
+    function hasLiveKey(uid) {
+      let m = get(/databases/$(database)/documents/members/$(uid));
+      return m != null && exists(/databases/$(database)/documents/keys/$(m.data.key));
+    }
+
+    // Les clés : jamais lisibles ni modifiables depuis l'app (gérées dans la console).
+    match /keys/{key} {
+      allow read, write: if false;
+    }
+
+    // Rejoindre : on n'écrit que sa propre fiche, { key, at: serverTimestamp() }, avec une clé valide.
+    // Même format de clé que la fonction depot : 10 à 128 caractères parmi A-Z a-z 0-9 _ -
+    match /members/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['key', 'at'])
+        && request.resource.data.key is string
+        && request.resource.data.key.matches('^[A-Za-z0-9_-]{10,128}$')
+        && request.resource.data.at == request.time
+        && exists(/databases/$(database)/documents/keys/$(request.resource.data.key));
+      allow list, delete: if false;
+    }
+
+    // Répertoire des morceaux : { title, voices: { S|A|H|T: { hash, at } }, createdAt, updatedAt }
+    match /songs/{songId} {
+      allow read, delete: if isMember();
+      allow create, update: if isMember() && validSong(request.resource.data);
+    }
+
+    // Fichiers audio reçus (id = empreinte SHA-256 du fichier, évite les doublons)
+    match /files/{hash} {
+      allow read, delete: if isMember();
+      // Dépôt : toujours dans « À classer », à l'heure du serveur
+      allow create: if isMember() && isSha256(hash) && validNewFile(request.resource.data);
+      // Classer (inbox → classified) ou « Mal classé ? » (retour en inbox)
+      allow update: if isMember() && validFileChange(hash, request.resource.data, resource.data);
+    }
+
+    function isSha256(s) {
+      return s is string && s.matches('^[0-9a-f]{64}$');
+    }
+
+    function validSong(d) {
+      return d.keys().hasOnly(['title', 'voices', 'createdAt', 'updatedAt'])
+        && d.title is string && d.title.trim().size() > 0 && d.title.size() <= 120
+        && (!('voices' in d) || validVoices(d.voices))
+        && (!('createdAt' in d) || d.createdAt is number)
+        && (!('updatedAt' in d) || d.updatedAt is number);
+    }
+    function validVoices(v) {
+      return v is map && v.keys().hasOnly(['S', 'A', 'H', 'T'])
+        && (!('S' in v) || validVoice(v.S)) && (!('A' in v) || validVoice(v.A))
+        && (!('H' in v) || validVoice(v.H)) && (!('T' in v) || validVoice(v.T));
+    }
+    function validVoice(x) {
+      return x is map && x.keys().hasOnly(['hash', 'at']) && isSha256(x.hash) && x.at is number;
+    }
+
+    // name, size et type sont facultatifs : « Mal classé ? » recrée un document minimal s'il a disparu
+    function validNewFile(d) {
+      return d.keys().hasOnly(['status', 'name', 'size', 'type', 'createdAt', 'source'])
+        && d.status == 'inbox'
+        && d.createdAt == request.time
+        && (!('name' in d) || (d.name is string && d.name.size() <= 500))
+        && (!('size' in d) || (d['size'] is number && d['size'] >= 0))
+        && (!('type' in d) || (d['type'] is string && d['type'].size() <= 200))
+        && (!('source' in d) || (d.source is string && d.source.size() <= 50));
+    }
+
+    // Seuls status, song, voice et createdAt (heure du serveur) peuvent changer.
+    // Classer : seulement depuis « À classer » (le premier qui classe gagne), et le morceau
+    // doit contenir ce fichier pour cette voix à la fin de la transaction.
+    function validFileChange(hash, d, before) {
+      let changed = d.diff(before).affectedKeys();
+      return changed.hasOnly(['status', 'song', 'voice', 'createdAt'])
+        && (!('createdAt' in changed) || d.createdAt == request.time)
+        && (!('song' in d) || d.song is string)
+        && (!('voice' in d) || d.voice in ['S', 'A', 'H', 'T'])
+        && (d.status == 'inbox'
+          || (d.status == 'classified' && before.status == 'inbox' && inSong(hash, d.song, d.voice)));
+    }
+    function inSong(hash, songId, voice) {
+      return getAfter(/databases/$(database)/documents/songs/$(songId)).data.voices[voice].hash == hash;
+    }
+  }
+}

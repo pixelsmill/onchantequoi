@@ -1,0 +1,139 @@
+<div class="page">
+  <h2 class="page-title">Installer sur mon téléphone</h2>
+
+  @if (pwa.installed()) {
+    <p class="ok">
+      <tabler-icon icon="check" [size]="18" /> L'app est installée sur cet appareil.
+    </p>
+  }
+
+  <details class="card" [open]="pwa.platform === 'ios'" [style.order]="order('ios')">
+    <summary>iPhone</summary>
+
+    <h3>1. Ajouter l'app à l'écran d'accueil</h3>
+    <ol>
+      <li>Ouvrez le lien de la chorale dans <b>Safari</b>.</li>
+      <li>Touchez le bouton <b>Partager</b> (le carré avec une flèche vers le haut).</li>
+      <li>Choisissez <b>« Sur l'écran d'accueil »</b>, puis <b>Ajouter</b>.</li>
+      <li>
+        Au premier lancement, l'app peut redemander le lien : copiez-le avant (bouton
+        ci-dessous), puis touchez « Coller le lien ».
+      </li>
+    </ol>
+    @if (choirLink()) {
+      <button type="button" class="secondary" (click)="copy(choirLink())">
+        <tabler-icon icon="copy" [size]="18" /> Copier le lien de la chorale
+      </button>
+    }
+
+    <h3>2. Envoyer les audios reçus sur WhatsApp</h3>
+    <p>
+      Sur iPhone, une app web ne peut pas recevoir de partage. On passe donc par un raccourci
+      <b>« Envoyer à la Chorale »</b>, à installer une seule fois.
+    </p>
+    @if (shortcutUrl) {
+      <a class="primary button" [href]="shortcutUrl" target="_blank" rel="noopener"
+        >Installer le raccourci</a
+      >
+    } @else {
+      <p class="muted">
+        Le lien du raccourci n'est pas encore disponible : demandez-le dans le groupe WhatsApp.
+      </p>
+    }
+    <ol>
+      <li>Dans WhatsApp, faites un appui long sur l'audio, puis touchez <b>Transférer</b>.</li>
+      <li>Touchez l'icône <b>Partager</b> (le carré avec une flèche vers le haut).</li>
+      <li>
+        Choisissez <b>« Envoyer à la Chorale »</b> (touchez <b>Plus</b> si vous ne le voyez pas).
+      </li>
+      <li>La première fois, iOS demande d'autoriser la connexion : touchez <b>Toujours autoriser</b>.</li>
+      <li>Une notification confirme l'envoi : l'audio attend dans « À classer ».</li>
+    </ol>
+    <p class="muted">
+      Sans le raccourci : enregistrez l'audio dans <b>Fichiers</b> depuis WhatsApp, puis utilisez
+      le bouton <b>Déposer</b> de l'app.
+    </p>
+
+    <details class="sub">
+      <summary>Créer le raccourci (une seule fois, pour l'organisateur)</summary>
+      <ol>
+        <li>Ouvrez l'app <b>Raccourcis</b>, touchez <b>+</b> et nommez-le « Envoyer à la Chorale ».</li>
+        <li>Ajoutez une action <b>Texte</b> et collez-y l'adresse d'envoi ci-dessous.</li>
+        <li>
+          Dans les détails du raccourci (ⓘ), activez <b>« Dans la feuille de partage »</b>, types
+          <b>Fichiers</b> et <b>Supports</b> uniquement.
+        </li>
+        <li>Ajoutez <b>« Répéter chaque élément »</b> sur l'entrée du raccourci.</li>
+        <li>
+          Dans la boucle : <b>« Obtenir le contenu de l'URL »</b> avec le <i>Texte</i> comme URL,
+          <b>En afficher plus</b> : méthode <b>POST</b>, en-tête <code>X-Nom</code> =
+          <i>Répéter l'élément</i> › <i>Nom</i>, <b>Demander le corps</b> : <b>Fichier</b> =
+          <i>Répéter l'élément</i>.
+        </li>
+        <li>Toujours dans la boucle : <b>« Afficher la notification »</b> avec le <i>Contenu de l'URL</i>.</li>
+        <li>
+          Testez depuis WhatsApp, puis partagez-le : <b>Partager</b> → <b>Copier le lien iCloud</b>.
+          Postez ce lien dans le groupe (et collez-le dans <code>shortcutUrl</code> de
+          <code>src/app/config.ts</code> pour qu'il apparaisse ici).
+        </li>
+      </ol>
+      <p class="muted">Recette détaillée : <code>docs/raccourci-iphone.md</code> dans le projet.</p>
+      <p class="muted">Adresse d'envoi (elle contient la clé : à ne poster que dans le groupe) :</p>
+      <div class="copy-box">
+        <code>{{ depotUrl() }}</code>
+        <button type="button" class="icon-btn" aria-label="Copier l'adresse d'envoi" (click)="copy(depotUrl())">
+          <tabler-icon icon="copy" [size]="20" />
+        </button>
+      </div>
+    </details>
+  </details>
+
+  <details class="card" [open]="pwa.platform === 'android'" [style.order]="order('android')">
+    <summary>Android</summary>
+
+    <h3>1. Installer l'app</h3>
+    @if (pwa.canInstall()) {
+      <button type="button" class="primary" (click)="pwa.install()">Installer l'app</button>
+    } @else {
+      <ol>
+        <li>Ouvrez le lien de la chorale dans <b>Chrome</b>.</li>
+        <li>Touchez le menu <b>⋮</b> en haut à droite.</li>
+        <li>Choisissez <b>« Installer l'application »</b> (ou « Ajouter à l'écran d'accueil »).</li>
+      </ol>
+    }
+
+    <h3>2. Envoyer les audios reçus sur WhatsApp</h3>
+    <ol>
+      <li>Dans WhatsApp, sélectionnez un ou plusieurs audios (appui long).</li>
+      <li>Touchez <b>Partager</b>, puis choisissez <b>Chorale</b>.</li>
+      <li>L'app s'ouvre et envoie les audios dans « À classer ».</li>
+    </ol>
+    <p class="muted">L'app doit être installée pour apparaître dans la liste de partage.</p>
+  </details>
+
+  <details class="card" [open]="pwa.platform === 'desktop'" [style.order]="order('desktop')">
+    <summary>Ordinateur</summary>
+    <ol>
+      <li>Enregistrez les audios depuis WhatsApp (Web ou application).</li>
+      <li>
+        Glissez-les <b>n'importe où sur la page</b> de l'app, ou utilisez le bouton <b>Déposer</b>.
+      </li>
+      <li>Ils arrivent dans « À classer ».</li>
+    </ol>
+  </details>
+
+  @if (choirLink()) {
+    <section class="card" [style.order]="2">
+      <h3>Inviter un choriste</h3>
+      <p class="muted">Envoyez-lui le lien de la chorale :</p>
+      <div class="copy-box">
+        <code>{{ choirLink() }}</code>
+        <button type="button" class="icon-btn" aria-label="Copier le lien de la chorale" (click)="copy(choirLink())">
+          <tabler-icon icon="copy" [size]="20" />
+        </button>
+      </div>
+    </section>
+  }
+
+  <p [style.order]="3"><a routerLink="/">← Retour aux morceaux</a></p>
+</div>

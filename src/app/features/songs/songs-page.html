@@ -1,0 +1,71 @@
+@if (store.songs().length >= 7) {
+  <label class="visually-hidden" for="search">Rechercher un morceau</label>
+  <input
+    id="search"
+    class="field search"
+    type="search"
+    placeholder="Rechercher un morceau"
+    [value]="query()"
+    (input)="query.set($any($event.target).value)"
+  />
+}
+
+@if (!store.songsLoaded()) {
+  <p class="empty" aria-live="polite">Chargement…</p>
+} @else {
+  <ul class="songs">
+    @for (song of filtered(); track song.id) {
+      <li class="card song">
+        <div class="head">
+          <div class="titles">
+            <h2>
+              {{ song.title }}
+              @if (fresh(song)) {
+                <span class="new">Nouveau</span>
+              }
+            </h2>
+            @if (song.updatedAt) {
+              <p class="sub">Mis à jour {{ ago(song.updatedAt) }}</p>
+            }
+          </div>
+          <button
+            type="button"
+            class="icon-btn"
+            [attr.aria-label]="'Options du morceau ' + song.title"
+            (click)="menu(song)"
+          >
+            <tabler-icon icon="dots" [size]="22" />
+          </button>
+        </div>
+        <div class="voices">
+          @for (v of voices; track v.key) {
+            @let rec = song.voices[v.key];
+            <button
+              type="button"
+              class="vbtn"
+              [attr.data-v]="v.key"
+              [class.playing]="player.isCurrent(song.id, v.key)"
+              [disabled]="!rec"
+              [attr.aria-label]="
+                v.long + (rec ? ', enregistré le ' + dateShort(rec.at) : ', pas encore reçu')
+              "
+              (pointerdown)="rec && player.prefetch(rec.hash)"
+              (click)="play(song, v.key)"
+            >
+              {{ v.short }}<small>{{ rec ? dateShort(rec.at) : '—' }}</small>
+            </button>
+          }
+        </div>
+      </li>
+    } @empty {
+      <li class="empty">
+        @if (store.songs().length) {
+          Aucun morceau ne correspond.
+        } @else {
+          <strong>Aucun morceau pour l'instant</strong>
+          Déposez les enregistrements reçus sur WhatsApp, puis classez-les dans « À classer ».
+        }
+      </li>
+    }
+  </ul>
+}

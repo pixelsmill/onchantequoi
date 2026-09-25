@@ -1,0 +1,23 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isMember() {
+      return request.auth != null
+        && firestore.exists(/databases/(default)/documents/members/$(request.auth.uid))
+        && firestore.exists(/databases/(default)/documents/keys/$(
+             firestore.get(/databases/(default)/documents/members/$(request.auth.uid)).data.key));
+    }
+
+    match /audio/{hash} {
+      allow read, delete: if isMember();
+      allow create, update: if isMember()
+        && request.resource.size < 40 * 1024 * 1024
+        && request.resource.contentType.matches('(audio|video)/.*|application/(ogg|octet-stream)');
+    }
+
+    match /{other=**} {
+      allow read, write: if false;
+    }
+  }
+}

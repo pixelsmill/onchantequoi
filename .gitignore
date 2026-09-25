@@ -1,0 +1,46 @@
+# Build Angular
+/dist
+/tmp
+/out-tsc
+/bazel-out
+/.angular/cache
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log
+
+# Firebase
+.firebase/
+*-debug.log
+firebase-debug.*.log
+ui-debug.log
+functions/.runtimeconfig.json
+functions/*.local
+
+# Éditeurs
+.idea/
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/mcp.json
+.history/*
+
+# Divers
+.sass-cache/
+/connect.lock
+/coverage
+/libpeerconnection.log
+testem.log
+/typings
+__screenshots__/
+.DS_Store
+Thumbs.db

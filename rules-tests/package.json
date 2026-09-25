@@ -1,0 +1,20 @@
+{
+  "name": "chorale-rules-tests",
+  "private": true,
+  "type": "module",
+  "description": "Tests des règles Firestore et Storage dans l'émulateur Firebase",
+  "engines": {
+    "node": ">=22"
+  },
+  "volta": {
+    "extends": "../package.json"
+  },
+  "scripts": {
+    "test": "cd .. && firebase emulators:exec --only firestore,storage --project demo-chorale \"npm --prefix rules-tests run test:run\"",
+    "test:run": "node --test --test-concurrency=1 --test-reporter=spec firestore.test.js storage.test.js"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
+    "firebase": "^12.19.0"
+  }
+}

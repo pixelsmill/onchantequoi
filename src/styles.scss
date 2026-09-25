@@ -1,0 +1,250 @@
+// Thème de l'app (clair / sombre selon le téléphone) et éléments communs
+
+:root {
+  --bg: #f6f3f8;
+  --card: #ffffff;
+  --text: #1f1a24;
+  --muted: #6d6575;
+  --line: #e4dde9;
+  --accent: #7a3e9d;
+  --accent-soft: #efe4f6;
+  --on-accent: #ffffff;
+  --S: #b92a62;
+  --S-soft: #fbe3ec;
+  --A: #a4560a;
+  --A-soft: #fcebd8;
+  --H: #2360b5;
+  --H-soft: #dfe9f8;
+  --T: #2a7247;
+  --T-soft: #dcf1e3;
+  --danger: #b3261e;
+  --shadow: 0 1px 2px rgba(40, 20, 60, 0.06), 0 2px 8px rgba(40, 20, 60, 0.06);
+  --radius: 16px;
+  --max: 640px;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16121a;
+    --card: #221c28;
+    --text: #f1ecf4;
+    --muted: #a79daf;
+    --line: #372e3e;
+    --accent: #c58ee6;
+    --accent-soft: #3a2a47;
+    --on-accent: #1d1224;
+    --S: #f07aa6;
+    --S-soft: #4a2233;
+    --A: #f0a55a;
+    --A-soft: #45311d;
+    --H: #7fadf0;
+    --H-soft: #1f3150;
+    --T: #74c996;
+    --T-soft: #1d3a29;
+    --danger: #f2877f;
+    --shadow: none;
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  font:
+    16px/1.4 system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  min-height: 100vh;
+  min-height: 100dvh;
+  -webkit-text-size-adjust: 100%;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+:focus-visible {
+  outline: 2.5px solid var(--accent);
+  outline-offset: 2px;
+}
+
+a {
+  color: var(--accent);
+}
+
+ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+// Cartes
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow);
+}
+
+// Champs de saisie
+.field {
+  width: 100%;
+  padding: 11px 12px;
+  border-radius: 10px;
+  border: 1.5px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+}
+
+// Boutons
+.primary,
+.secondary,
+.danger-btn {
+  font-weight: 650;
+  padding: 12px 18px;
+  border-radius: 12px;
+  min-height: 46px;
+}
+
+.primary {
+  border: 0;
+  background: var(--accent);
+  color: var(--on-accent);
+
+  &:disabled {
+    opacity: 0.4;
+  }
+}
+
+.secondary {
+  border: 1.5px solid var(--line);
+  background: transparent;
+}
+
+.danger-btn {
+  border: 0;
+  background: var(--danger);
+  color: var(--card);
+}
+
+.link-btn {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  text-decoration: underline;
+  padding: 6px;
+  font-size: 14px;
+
+  &.danger {
+    color: var(--danger);
+  }
+}
+
+.chip-btn {
+  border: 1px solid var(--line);
+  background: transparent;
+  border-radius: 99px;
+  padding: 6px 11px;
+  font-size: 13px;
+  font-weight: 600;
+  min-height: 32px;
+
+  &[aria-pressed='true'] {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+}
+
+.icon-btn {
+  border: 0;
+  background: transparent;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  flex: none;
+}
+
+// Pastilles de lecture (lecture / pause)
+.play-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--accent);
+  color: var(--on-accent);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+// Liste vide
+.empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 48px 16px;
+
+  strong {
+    display: block;
+    color: var(--text);
+    font-size: 17px;
+    margin-bottom: 4px;
+  }
+}
+
+// Petit intitulé au-dessus d'un groupe de boutons
+.label {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 600;
+  margin: 10px 0 6px;
+}

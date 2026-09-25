@@ -1,0 +1,87 @@
+<div class="head">
+  <button
+    type="button"
+    class="play-circle"
+    [attr.aria-label]="playing() ? 'Pause' : 'Écouter l’enregistrement'"
+    (click)="togglePlay()"
+  >
+    <tabler-icon [icon]="playing() ? 'player-pause-filled' : 'player-play-filled'" [size]="20" />
+  </button>
+  <div class="meta">
+    <b>Enregistrement reçu</b>
+    <span>{{ received() }}</span>
+    @if (sent(); as s) {
+      <span class="sent">{{ s }}</span>
+    }
+  </div>
+</div>
+
+<div class="label" [id]="id() + '-voix'">Voix annoncée par le prof</div>
+<div class="pills" role="group" [attr.aria-labelledby]="id() + '-voix'">
+  @for (v of voices; track v.key) {
+    <button
+      type="button"
+      class="pill"
+      [attr.data-v]="v.key"
+      [attr.aria-pressed]="draft().voice === v.key"
+      (click)="setVoice(v.key)"
+    >
+      {{ v.long }}
+    </button>
+  }
+</div>
+
+<label class="label" [for]="id() + '-morceau'">Morceau</label>
+<div class="picker">
+  @if (chosenTitle(); as t) {
+    <div class="chosen">
+      <span
+        >{{ t }}
+        @if (!song()) {
+          (nouveau)
+        }
+      </span>
+      <button type="button" aria-label="Changer de morceau" (click)="clearSong()">×</button>
+    </div>
+  } @else {
+    <input
+      #q
+      class="field"
+      type="text"
+      placeholder="Tapez le titre…"
+      autocomplete="off"
+      maxlength="120"
+      enterkeyhint="done"
+      [id]="id() + '-morceau'"
+      [value]="draft().query"
+      (input)="onQuery($any($event.target).value)"
+      (focus)="open.set(true)"
+      (keydown.enter)="$event.preventDefault(); pickFirst()"
+    />
+    @if (open() && (suggestions().length || canCreate())) {
+      <div class="sugg">
+        @for (s of suggestions(); track s.id) {
+          <button type="button" (click)="pick(s)">{{ s.title }}</button>
+        }
+        @if (canCreate()) {
+          <button type="button" class="create" (click)="create()">
+            + Nouveau morceau « {{ draft().query.trim() }} »
+          </button>
+        }
+      </div>
+    }
+  }
+</div>
+
+@if (replaces(); as r) {
+  <p class="hint">
+    Remplacera l'enregistrement {{ voiceName[draft().voice!] }} du {{ dateShort(r.at) }}
+  </p>
+}
+
+<div class="actions">
+  <button type="button" class="primary" [disabled]="!ready() || busy()" (click)="classify()">
+    {{ busy() ? 'Classement…' : 'Classer' }}
+  </button>
+  <button type="button" class="link-btn danger" (click)="remove()">Supprimer</button>
+</div>
