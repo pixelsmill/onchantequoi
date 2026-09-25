@@ -1,13 +1,14 @@
-// Collez ici la configuration de votre application web Firebase
-// (Console Firebase > Paramètres du projet > Vos applications > Configuration).
-// Tant que apiKey vaut 'REMPLACER', l'app tourne en MODE DÉMO (données fictives, rien n'est enregistré).
+// Configuration de l'application web Firebase du projet « onchantequoi »
+// (Console Firebase > Paramètres du projet > Vos applications). Elle n'est pas secrète.
+// Mode démo (données fictives, rien n'est enregistré) : ajouter ?demo à l'adresse,
+// ou remettre apiKey: 'REMPLACER'.
 export const firebaseConfig = {
-  apiKey: 'REMPLACER',
-  authDomain: '',
-  projectId: '',
-  storageBucket: '',
-  messagingSenderId: '',
-  appId: '',
+  apiKey: 'AIzaSyBLn97O48fG9di0ejTeKZqyUj5kx5Y2eQQ',
+  authDomain: 'onchantequoi.firebaseapp.com',
+  projectId: 'onchantequoi',
+  storageBucket: 'onchantequoi.firebasestorage.app',
+  messagingSenderId: '889556654323',
+  appId: '1:889556654323:web:1ff0f3b5c61c4ae49e3f86',
 };
 
 // Nom affiché en haut de l'app

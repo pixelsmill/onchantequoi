@@ -15,12 +15,12 @@ Sommaire : [1. Essayer](#1-essayer-tout-de-suite-mode-démo) · [2. Mise en lign
 
 ## 1. Essayer tout de suite (mode démo)
 
-Tant que `src/app/config.ts` contient `apiKey: 'REMPLACER'`, l'app tourne avec des données fictives, et rien n'est enregistré.
+L'app est branchée sur le projet Firebase **onchantequoi** (`src/app/config.ts`, `.firebaserc`). Pour l'essayer avec des données fictives, sans rien enregistrer, ajoutez `?demo` à l'adresse :
 
 ```bash
 npm install
 npm start
-# puis ouvrir http://localhost:4200
+# puis ouvrir http://localhost:4200/?demo
 ```
 
 Il faut **Node 22**. Grâce au champ `volta` du `package.json`, Volta le choisit tout seul dans ce dossier. Sans Volta, faites `nvm use 22`.
@@ -38,9 +38,8 @@ Une fois en ligne, on peut toujours montrer la démo avec `https://<projet>.web.
 3. **Authentication** > Commencer > Méthode de connexion : activez **Anonyme**.
 4. **Firestore Database** > Créer une base : mode production, région `europe-west1` (ou `eur3`).
 5. **Storage** > Commencer : même région (ou `us-central1`, voir le coût ci-dessus).
-6. **Paramètres du projet** > *Vos applications* > ajoutez une **application Web** (icône `</>`).
-   Copiez la configuration dans `src/app/config.ts` à la place de `REMPLACER`, et mettez le nom de la chorale dans `choirName`.
-7. Dans `.firebaserc`, remplacez `REMPLACER-par-id-du-projet` par l'ID du projet.
+6. **Application Web** : déjà faite pour onchantequoi (sa configuration est dans `src/app/config.ts`). Pour un autre projet : *Paramètres du projet* > *Vos applications* > application Web (`</>`), puis copiez la configuration dans `src/app/config.ts`.
+7. **ID du projet** : déjà `onchantequoi` dans `.firebaserc`.
 8. Déployez :
    ```bash
    npm install -g firebase-tools      # si besoin (déjà installé sur ce PC)
