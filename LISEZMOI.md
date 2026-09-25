@@ -134,7 +134,7 @@ La fonction traite 3 envois à la fois ; au-delà, elle demande de réessayer (e
 | `npm run test:rules` | les règles Firestore et Storage dans l'émulateur : non-membre refusé, clé supprimée donc accès coupé, `keys` illisible, etc. |
 | `npm run test:depot` | la fonction `depot` de bout en bout dans les émulateurs : dépôt, doublon, clé invalide, fichier refusé, multipart |
 
-Résultats au 25 septembre 2026 : 26 tests pour l'app, 13 pour la fonction, 34 pour les règles (vérifiés aussi contre des règles volontairement affaiblies) et 12 de bout en bout.
+Résultats au 25 septembre 2026 : 28 tests pour l'app, 13 pour la fonction, 34 pour les règles (vérifiés aussi contre des règles volontairement affaiblies) et 12 de bout en bout.
 
 Les deux dernières commandes lancent les émulateurs Firebase. Elles demandent `firebase-tools` et **Java 21 ou plus** : le Java par défaut de ce PC est un Java 8, trop ancien. Celui d'Android Studio convient :
 
