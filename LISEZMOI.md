@@ -191,8 +191,9 @@ Le paramètre `?emu` (seulement sur `localhost`) branche l'app sur les émulateu
 - **Mode démo conservé** : le SDK Firebase n'est chargé que hors démo (fichier séparé, environ 170 ko compressés). L'app de départ pèse environ 80 ko compressés.
 - **Service worker** : `public/sw.js` reçoit les partages Android (`POST /share`), puis délègue le reste au service worker Angular (hors-ligne, mises à jour). Quand une nouvelle version est prête, un bandeau propose de recharger.
 - **Firestore en cache local** : la liste des morceaux s'affiche tout de suite, même sans réseau. Les audios, eux, demandent le réseau.
-- **Lecture sur iPhone** : l'audio est « débloqué » au premier toucher, et l'adresse de l'audio est demandée dès l'appui, pour que la lecture démarre dans le geste (exigence d'iOS).
-- **« Mal classé ? »** vérifie que l'audio écouté occupe toujours la voix, pour ne pas retirer un enregistrement plus récent déposé entre-temps.
+- **Lecture sur iPhone** : l'adresse de l'audio est demandée dès l'appui sur une voix, et le lecteur est « débloqué » dans le geste même (exigence d'iOS). Rien ne se joue avant qu'on touche une voix : la musique de l'utilisateur n'est pas coupée à l'ouverture de l'app.
+- **Plusieurs personnes en même temps** : « Mal classé ? » ne retire l'audio que s'il occupe toujours la voix. Supprimer un audio ou un morceau vérifie qu'il n'a pas été classé ou complété entre-temps. Un audio qu'on a commencé à classer garde le morceau affiché, même si quelqu'un classe autre chose.
+- **Réseau faible** : si le lien ne peut pas être vérifié, l'app propose « Réessayer » au lieu de dire que le lien est invalide. Les audios partagés depuis Android restent en attente sur le téléphone tant qu'ils ne sont pas envoyés.
 - **Sécurité** : règles Firestore et Storage testées dans l'émulateur. L'en-tête `Referrer-Policy: strict-origin-when-cross-origin` garantit que le lien complet (qui contient la clé) n'est jamais transmis aux autres sites.
 
 ### À vérifier au premier essai
