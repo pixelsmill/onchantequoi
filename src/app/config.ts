@@ -11,6 +11,10 @@ export const firebaseConfig = {
   appId: '1:889556654323:web:1ff0f3b5c61c4ae49e3f86',
 };
 
+// Tant que le projet n'est pas prêt (forfait Blaze, Firestore, Storage, connexion anonyme),
+// l'app en ligne tourne en mode démo pour tout le monde. Passer à false, puis npm run deploy.
+export const demoOnly = true;
+
 // Nom affiché en haut de l'app
 export const choirName = 'Chorale';
 

@@ -15,7 +15,11 @@ Sommaire : [1. Essayer](#1-essayer-tout-de-suite-mode-démo) · [2. Mise en lign
 
 ## 1. Essayer tout de suite (mode démo)
 
-L'app est branchée sur le projet Firebase **onchantequoi** (`src/app/config.ts`, `.firebaserc`). Pour l'essayer avec des données fictives, sans rien enregistrer, ajoutez `?demo` à l'adresse :
+L'app est branchée sur le projet Firebase **onchantequoi** (`src/app/config.ts`, `.firebaserc`).
+
+**En ligne, en attendant le forfait Blaze** : https://onchantequoi.web.app tourne en mode démo pour tout le monde (`demoOnly = true` dans `src/app/config.ts`). C'est gratuit (Hosting seul) et ça permet d'essayer l'app sur de vrais téléphones : installation, lecture, partage depuis WhatsApp sur Android. Rien n'est enregistré, chaque téléphone a ses propres données fictives. Pour republier seulement le site : `npm run deploy:site`.
+
+En local, ajoutez `?demo` à l'adresse pour les données fictives :
 
 ```bash
 npm install
@@ -40,13 +44,13 @@ Une fois en ligne, on peut toujours montrer la démo avec `https://<projet>.web.
 5. **Storage** > Commencer : même région (ou `us-central1`, voir le coût ci-dessus).
 6. **Application Web** : déjà faite pour onchantequoi (sa configuration est dans `src/app/config.ts`). Pour un autre projet : *Paramètres du projet* > *Vos applications* > application Web (`</>`), puis copiez la configuration dans `src/app/config.ts`.
 7. **ID du projet** : déjà `onchantequoi` dans `.firebaserc`.
-8. Déployez :
+8. Dans `src/app/config.ts`, passez `demoOnly` à `false`, puis déployez :
    ```bash
-   npm install -g firebase-tools      # si besoin (déjà installé sur ce PC)
-   firebase login
+   npx firebase login                 # une seule fois (déjà fait sur ce PC)
    npm --prefix functions install     # dépendances de la fonction « depot »
    npm run deploy                     # = ng build + firebase deploy
    ```
+   La CLI Firebase fait partie du projet (`firebase-tools` dans les devDependencies) : pas besoin de l'installer globalement.
    `firebase deploy` publie l'app (Hosting), les règles Firestore et Storage, les index et la fonction `depot` (région europe-west1, Node 22).
    - Au premier déploiement de la fonction, la CLI active les API nécessaires (Cloud Functions, Cloud Build, Artifact Registry, Cloud Run…). Acceptez.
    - Si elle demande combien de jours garder les images de conteneur, répondez **1** : cela évite de petits frais de stockage.

@@ -1,5 +1,5 @@
 import { computed, Injectable, signal } from '@angular/core';
-import { choirName, firebaseConfig } from '../config';
+import { choirName, demoOnly, firebaseConfig } from '../config';
 import { Backend, ClassifyRequest, ClassifyResult, InboxFile, Song, VoiceKey } from './models';
 import { keyFromText, sortSongs } from './utils';
 
@@ -92,6 +92,7 @@ export class ChoraleStore {
     const demo =
       !emulators &&
       (firebaseConfig.apiKey === 'REMPLACER' ||
+        demoOnly ||
         params.has('demo') ||
         readSession(DEMO_STORE) === '1');
     try {
