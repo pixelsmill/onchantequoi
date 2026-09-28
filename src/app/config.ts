@@ -13,7 +13,7 @@ export const firebaseConfig = {
 
 // Tant que le projet n'est pas prêt (forfait Blaze, Firestore, Storage, connexion anonyme),
 // l'app en ligne tourne en mode démo pour tout le monde. Passer à false, puis npm run deploy.
-export const demoOnly = true;
+export const demoOnly = false;
 
 // Nom affiché en haut de l'app
 export const choirName = 'Chorale';

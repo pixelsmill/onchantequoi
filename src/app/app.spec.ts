@@ -49,9 +49,15 @@ describe('App (mode démo)', () => {
 
   it('affiche le titre, les onglets, le badge « À classer » et le bouton Déposer', async () => {
     const fixture = TestBed.createComponent(App);
-    await new Promise((r) => setTimeout(r, 50));
-    await fixture.whenStable();
     const el: HTMLElement = fixture.nativeElement;
+    // Le mode démo se charge à la demande : on attend l'affichage plutôt qu'un délai fixe
+    await vi.waitFor(
+      async () => {
+        await fixture.whenStable();
+        expect(el.querySelector('.badge')?.textContent).toContain('4');
+      },
+      { timeout: 5000, interval: 50 },
+    );
     expect(el.querySelector('h1')?.textContent).toContain('Chorale');
     expect(el.querySelectorAll('nav.tabs a').length).toBe(2);
     expect(el.querySelector('.badge')?.textContent).toContain('4');
