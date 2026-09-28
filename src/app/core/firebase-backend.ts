@@ -63,6 +63,24 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   });
 }
 
+/**
+ * Sur un appareil neuf, Firestore répond d'abord avec son cache local, vide : on attend
+ * la réponse du serveur (4 s au plus) pour ne pas afficher « Aucun morceau » à tort.
+ */
+function serverFirst<T>(cb: (value: T) => void, wait = 4000) {
+  let fromServer = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  return (value: T, emptyCache: boolean) => {
+    clearTimeout(timer);
+    if (!emptyCache || fromServer) {
+      fromServer = true;
+      cb(value);
+    } else {
+      timer = setTimeout(() => cb(value), wait);
+    }
+  };
+}
+
 function toSong(id: string, d: DocumentData): Song {
   return {
     id,
@@ -124,19 +142,27 @@ export async function createFirebaseBackend(
     },
 
     onSongs(cb, onError) {
+      const emit = serverFirst(cb);
       return onSnapshot(
         collection(db, 'songs'),
-        (qs) => cb(qs.docs.map((d) => toSong(d.id, d.data()))),
+        { includeMetadataChanges: true },
+        (qs) =>
+          emit(
+            qs.docs.map((d) => toSong(d.id, d.data())),
+            qs.empty && qs.metadata.fromCache,
+          ),
         onError,
       );
     },
 
     onInbox(cb, onError) {
       const q = query(collection(db, 'files'), where('status', '==', 'inbox'));
+      const emit = serverFirst(cb);
       return onSnapshot(
         q,
+        { includeMetadataChanges: true },
         (qs) =>
-          cb(
+          emit(
             qs.docs.map((d): InboxFile => {
               const x = d.data({ serverTimestamps: 'estimate' });
               return {
@@ -148,6 +174,7 @@ export async function createFirebaseBackend(
                 createdAt: millis(x['createdAt']) ?? Date.now(),
               };
             }),
+            qs.empty && qs.metadata.fromCache,
           ),
         onError,
       );
