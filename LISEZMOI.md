@@ -54,7 +54,7 @@ Une fois en ligne, on peut toujours montrer la démo avec `https://<projet>.web.
    `firebase deploy` publie l'app (Hosting), les règles Firestore et Storage, les index et la fonction `depot` (région europe-west1, Node 22).
    - Au premier déploiement de la fonction, la CLI active les API nécessaires (Cloud Functions, Cloud Build, Artifact Registry, Cloud Run…). Acceptez.
    - Si elle demande combien de jours garder les images de conteneur, répondez **1** : cela évite de petits frais de stockage.
-   - Si la console le demande, **acceptez l'autorisation qui permet aux règles de Storage de lire Firestore** (sinon personne ne pourra écouter ni déposer).
+   - **Autorisation Storage → Firestore** : à la question *« Cloud Storage for Firebase needs an IAM Role to use cross-service rules. Grant the new role? »*, répondez **Y**. Sans elle, tout dépôt ou écoute est refusé (erreur 403). La CLI ne pose la question que dans un terminal interactif (pas avec `--non-interactive`) et seulement si `storage.rules` a changé depuis le dernier déploiement.
    - Le tout premier déploiement de la fonction échoue parfois, le temps que les autorisations se propagent : relancez simplement `firebase deploy`.
 
 Pour republier seulement l'app après une modification : `ng build && firebase deploy --only hosting`.
