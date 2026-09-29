@@ -3,6 +3,7 @@ import { provideRouter } from '@angular/router';
 import { provideServiceWorker } from '@angular/service-worker';
 import {
   IconCheck,
+  IconChevronDown,
   IconCopy,
   IconDeviceMobile,
   IconDots,
@@ -32,6 +33,7 @@ describe('App (mode démo)', () => {
         provideServiceWorker('sw.js', { enabled: false }),
         provideTablerIcons({
           IconCheck,
+          IconChevronDown,
           IconCopy,
           IconDeviceMobile,
           IconDots,
@@ -58,7 +60,7 @@ describe('App (mode démo)', () => {
       },
       { timeout: 5000, interval: 50 },
     );
-    expect(el.querySelector('h1')?.textContent).toContain('Chorale');
+    expect(el.querySelector('h1')?.textContent).toContain('On chante quoi');
     expect(el.querySelectorAll('nav.tabs a').length).toBe(2);
     expect(el.querySelector('.badge')?.textContent).toContain('4');
     expect(el.textContent).toContain('Mode démo');

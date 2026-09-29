@@ -1,7 +1,7 @@
-# Chorale — notes projet
+# On chante quoi ? (chorale) — notes projet
 
-- Webapp privée de répétition (français, mobile d'abord, thème clair/sombre). Specs et prototype d'origine : `specs/` (ne pas modifier).
-- Toujours garder le **mode démo** fonctionnel (`apiKey: 'REMPLACER'` dans `src/app/config.ts`, ou `?demo`) : il sert à montrer l'app sans backend.
+- Webapp privée de répétition « On chante quoi ? » (français, mobile d'abord, thème clair/sombre). Le chef de chœur s'appelle Seb (`teacherName` dans `src/app/config.ts`). Textes génériques sur la source des audios (WhatsApp n'est qu'un exemple). Specs et prototype d'origine : `specs/` (ne pas modifier).
+- Toujours garder le **mode démo** fonctionnel (`?demo`, `demoOnly` ou `apiKey: 'REMPLACER'` dans `src/app/config.ts`) : il sert à montrer l'app sans backend. En production : projet Firebase `onchantequoi`.
 - Données : `songs/{id}`, `files/{sha256}`, `keys/{clé}` (jamais lisibles côté client), `members/{uid}`. Les deux implémentations de `Backend` (`core/firebase-backend.ts`, `core/demo-backend.ts`) doivent rester équivalentes.
 - Les `.mp4` audio de WhatsApp arrivent souvent en `video/mp4` : l'input fichier, le share target et `guessType` doivent continuer à les accepter.
 - Node 22 (Volta). Tests : `npm test`, `npm run test:functions`, `npm run test:rules`, `npm run test:depot` (émulateurs : Java 21+, voir LISEZMOI.md).

@@ -1,6 +1,6 @@
-# Chorale – webapp de répétition
+# On chante quoi ? – webapp de répétition de la chorale
 
-Une liste de morceaux avec 4 boutons chacun (**S · A · H · Tous**), et un onglet **À classer** que tous les choristes peuvent remplir avec les audios envoyés par le prof sur WhatsApp.
+Une liste de morceaux avec 4 boutons chacun (**S · A · H · Tous**), et un onglet **À classer** que tous les choristes peuvent remplir avec les enregistrements de Seb, d'où qu'ils viennent (WhatsApp, mail, fichiers…).
 
 - Pas de compte ni de mot de passe : on entre avec le **lien secret** de la chorale (`https://<projet>.web.app/?cle=<clé>`), et le téléphone s'en souvient.
 - Tout le monde peut déposer et classer. Le premier qui classe gagne, et **« Mal classé ? »** renvoie l'audio dans « À classer ».
@@ -83,7 +83,7 @@ https://<id-du-projet>.web.app/?cle=VMgkUrmfd6r0nNB4RdSrow
 
 Dans l'app, l'icône de téléphone en haut à droite ouvre la page **« Installer sur mon téléphone »**. Elle montre d'abord les explications pour l'appareil utilisé (Android, iPhone ou ordinateur).
 
-- **Android** : dans Chrome, menu ⋮ > *Installer l'application* (ou le bouton « Installer l'app » de la page d'aide). Une fois l'app installée, on peut partager des audios depuis WhatsApp vers **Chorale**.
+- **Android** : dans Chrome, menu ⋮ > *Installer l'application* (ou le bouton « Installer l'app » de la page d'aide). Une fois l'app installée, on peut lui partager des audios depuis n'importe quelle app (WhatsApp, Fichiers, Gmail…) : elle apparaît sous le nom **On chante quoi ?**.
 - **iPhone** : dans Safari, bouton Partager > *Sur l'écran d'accueil*. L'app installée ne partage pas la mémoire de Safari : au premier lancement, elle peut redemander le lien. Il suffit de le coller (bouton « Coller le lien »).
 - **Ordinateur** : pas d'installation nécessaire. On peut glisser les audios n'importe où sur la page.
 
@@ -116,15 +116,17 @@ La fonction traite 3 envois à la fois ; au-delà, elle demande de réessayer (e
 ## 6. Utilisation
 
 - **Déposer** : bouton en bas à droite, pour choisir un ou plusieurs audios.
-  - *Android* : une fois l'app installée, on peut partir de WhatsApp. On sélectionne les audios, on touche **Partager**, puis **Chorale**.
-  - *iPhone* : on utilise le raccourci « Envoyer à la Chorale » depuis WhatsApp. Sans raccourci, on enregistre l'audio dans *Fichiers*, puis on touche **Déposer**.
+  - *Android* : une fois l'app installée, on part de n'importe quelle app (WhatsApp, Fichiers, Gmail…). On sélectionne les audios, on touche **Partager**, puis **On chante quoi ?**.
+  - *iPhone* : on utilise le raccourci « Envoyer à la Chorale », depuis n'importe quelle app. Sans raccourci, on enregistre l'audio dans *Fichiers*, puis on touche **Déposer**.
   - *Ordinateur* : on glisse les fichiers n'importe où sur la page.
-- **À classer** : on écoute, on touche la voix annoncée par le prof, on choisit le morceau (ou on tape un nouveau titre), puis on touche **Classer**. Le morceau choisi est pré-rempli pour les audios suivants. La date d'envoi WhatsApp s'affiche quand le nom du fichier la contient.
+- **À classer** : un seul audio est ouvert à la fois, les autres sont repliés en lignes (durée, heure d'envoi, voix déjà choisie, « écouté »). On écoute, on touche la voix annoncée par Seb, on choisit le morceau (ou on tape un nouveau titre), puis on touche **Classer** : l'audio suivant s'ouvre tout seul. Le morceau choisi est pré-rempli pour les audios suivants. La **durée** aide à repérer un extrait (moins d'une minute) d'un morceau entier.
 - Si deux personnes déposent le même audio, il n'est gardé qu'une fois. Si deux personnes classent le même audio en même temps, c'est le premier qui compte.
 - Un nouvel enregistrement **remplace** l'ancien pour la même voix du même morceau, et l'ancien fichier est supprimé.
 - **Mal classé ?** : dans le lecteur, ce bouton renvoie l'audio dans « À classer ».
 - Le lecteur propose aussi un retour de 10 s, une vitesse 1× / 0,85× / 0,7× (sans changer la hauteur des notes) et une boucle. Il se pilote depuis l'écran verrouillé.
-- Le menu **⋯** d'un morceau permet de le renommer, ou de le supprimer s'il est vide.
+- Les morceaux sont rangés **par ordre alphabétique**.
+- **Morceau reçu en plusieurs extraits** (déchiffrage : début, fin…) : créez un morceau par extrait, par exemple « Siyahamba – début » et « Siyahamba – fin ». Ils se suivent dans la liste. Quand la version complète arrive, classez-la dans « Siyahamba », puis supprimez les extraits.
+- Le menu **⋯** d'un morceau permet de le renommer, ou de le supprimer avec ses enregistrements (après confirmation, pour tout le monde).
 
 ---
 
@@ -137,7 +139,7 @@ La fonction traite 3 envois à la fois ; au-delà, elle demande de réessayer (e
 | `npm run test:rules` | les règles Firestore et Storage dans l'émulateur : non-membre refusé, clé supprimée donc accès coupé, `keys` illisible, etc. |
 | `npm run test:depot` | la fonction `depot` de bout en bout dans les émulateurs : dépôt, doublon, clé invalide, fichier refusé, multipart |
 
-Résultats au 25 septembre 2026 : 28 tests pour l'app, 13 pour la fonction, 34 pour les règles (vérifiés aussi contre des règles volontairement affaiblies) et 12 de bout en bout.
+Résultats au 29 septembre 2026 : 36 tests pour l'app, 17 pour la fonction, 35 pour les règles (vérifiés aussi contre des règles volontairement affaiblies) et 12 de bout en bout.
 
 Les deux dernières commandes lancent les émulateurs Firebase. Elles demandent `firebase-tools` et **Java 21 ou plus** : le Java par défaut de ce PC est un Java 8, trop ancien. Celui d'Android Studio convient :
 
@@ -178,7 +180,7 @@ Le paramètre `?emu` (seulement sur `localhost`) branche l'app sur les émulateu
 | `src/app/core/` | état de l'app (`chorale.store.ts`), accès Firebase (`firebase-backend.ts`) et démo (`demo-backend.ts`), lecteur, dépôt, installation |
 | `src/app/features/` | pages Morceaux, À classer, Installer, et l'écran d'accueil (lien) |
 | `src/app/shared/` | lecteur, feuilles modales, messages, zone de glisser-déposer |
-| `public/sw.js`, `public/manifest.webmanifest` | installation sur le téléphone, hors-ligne, réception des partages WhatsApp (Android) |
+| `public/sw.js`, `public/manifest.webmanifest` | installation sur le téléphone, hors-ligne, réception des partages (Android) |
 | `ngsw-config.json` | ce que le service worker Angular garde en cache |
 | `firestore.rules`, `storage.rules` | sécurité : accès uniquement avec une clé valide |
 | `functions/` | fonction `depot` (raccourci iPhone, et plus tard relevé e-mail ou bot) |
@@ -203,12 +205,12 @@ Le paramètre `?emu` (seulement sur `localhost`) branche l'app sur les émulateu
 
 - Les messages vocaux WhatsApp (Opus/Ogg) se lisent sur Android et sur les iPhone récents, mais un iPhone ancien (iOS 17 ou moins) pourrait ne pas les lire. Si le cas se présente, on ajoutera une conversion automatique.
 - Le raccourci iPhone : quelques libellés de l'app Raccourcis n'ont pas pu être vérifiés mot pour mot (signalés par ⚠️ dans la recette).
-- Le partage Android depuis WhatsApp : testé en simulant l'envoi du partage dans Chromium, pas encore sur un vrai téléphone.
+- Le partage Android depuis une autre app : testé en simulant l'envoi du partage dans Chromium, pas encore sur un vrai téléphone.
 
 ### Pistes pour la suite
 
 - Relevé e-mail : une adresse Gmail dédiée et un Google Apps Script qui, toutes les 5 min, poste les pièces jointes sur `/api/depot`.
-- Pré-cocher la voix en transcrivant le début de l'audio (le prof dit « sopranes », « altos »…).
+- Pré-cocher la voix en transcrivant le début de l'audio (Seb dit « sopranes », « altos »…).
 - Un bot WhatsApp (Baileys) avec un numéro dédié.
 - Le prénom de la personne qui a classé l'audio (stocké uniquement en local).
 - Garder hors ligne les audios déjà écoutés.

@@ -221,6 +221,16 @@ describe('Membre : opérations de l\'app', () => {
     await assertSucceeds(setDoc(doc(a, 'files', h), { ...ok, source: 'web' }));
   });
 
+  test('dépôt : durée facultative, en secondes (nombre positif, moins de 10 h)', async () => {
+    const a = db('alice');
+    const ok = { status: 'inbox', name: 'a.m4a', size: 10, type: 'audio/mp4', createdAt: serverTimestamp() };
+    await assertFails(setDoc(doc(a, 'files', randomHash()), { ...ok, duration: '157' }));
+    await assertFails(setDoc(doc(a, 'files', randomHash()), { ...ok, duration: 0 }));
+    await assertFails(setDoc(doc(a, 'files', randomHash()), { ...ok, duration: 40000 }));
+    await assertSucceeds(setDoc(doc(a, 'files', randomHash()), { ...ok, duration: 157.5 }));
+    await assertSucceeds(alice().addToInbox(randomHash(), { duration: 43.5 }));
+  });
+
   test('classement dans un nouveau morceau', async () => {
     const hash = await inboxFile();
     const r = await alice().classify({ hash, voice: 'S', newTitle: '  Le Lion est mort ce soir  ' });

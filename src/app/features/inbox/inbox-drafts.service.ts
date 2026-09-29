@@ -22,6 +22,8 @@ export class InboxDrafts {
   private readonly drafts = signal<Record<string, Draft>>({});
   /** Dernier morceau choisi : pré-rempli pour les audios suivants */
   readonly lastSongId = signal<string | null>(null);
+  /** Audios déjà écoutés pendant cette visite (repère visuel dans la liste) */
+  private readonly listenedSet = signal<ReadonlySet<string>>(new Set());
 
   constructor() {
     // Oublie les brouillons des audios qui ne sont plus à classer
@@ -51,6 +53,14 @@ export class InboxDrafts {
   update(hash: string, patch: Partial<Draft>): void {
     const shown = this.draft(hash);
     this.drafts.update((all) => ({ ...all, [hash]: { ...shown, ...patch } }));
+  }
+
+  listened(hash: string): boolean {
+    return this.listenedSet().has(hash);
+  }
+
+  markListened(hash: string): void {
+    if (!this.listenedSet().has(hash)) this.listenedSet.update((s) => new Set(s).add(hash));
   }
 
   remove(hash: string): void {

@@ -15,8 +15,11 @@ export const firebaseConfig = {
 // l'app en ligne tourne en mode démo pour tout le monde. Passer à false, puis npm run deploy.
 export const demoOnly = false;
 
-// Nom affiché en haut de l'app
-export const choirName = 'Chorale';
+// Nom affiché en haut de l'app (écran d'accueil du téléphone : manifest.webmanifest, index.html)
+export const choirName = 'On chante quoi ?';
+
+// Chef de chœur : c'est lui qui annonce la voix au début de chaque enregistrement
+export const teacherName = 'Seb';
 
 // Lien iCloud du raccourci iPhone « Envoyer à la Chorale », une fois créé (voir docs/raccourci-iphone.md).
 // Laissé vide, la page « Installer » explique comment le créer.

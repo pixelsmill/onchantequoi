@@ -1,5 +1,65 @@
 :host {
   display: block;
+  scroll-margin-top: 130px; // sous l'en-tête collant, quand on fait défiler jusqu'à lui
+}
+
+// Celui qu'on est en train de classer
+:host(.current) {
+  box-shadow:
+    var(--shadow),
+    0 0 0 2px var(--accent-soft);
+}
+
+// Replié : une ligne compacte
+:host(.compact) {
+  padding: 8px 10px 8px 8px;
+  margin-bottom: 8px;
+
+  .head {
+    margin-bottom: 0;
+    gap: 10px;
+  }
+
+  .play-circle {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+.summary {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  padding: 4px 0;
+  text-align: left;
+  color: var(--muted);
+  min-height: 44px;
+}
+
+.tag {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: var(--line);
+  color: var(--text);
+  white-space: nowrap;
+
+  @each $v in S, A, H, T {
+    &[data-v='#{$v}'] {
+      background: var(--#{$v}-soft);
+      color: var(--#{$v});
+    }
+  }
+}
+
+.dur {
+  font-weight: 600;
+  color: var(--muted);
 }
 
 .head {

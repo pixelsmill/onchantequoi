@@ -8,7 +8,7 @@ const logger = require('firebase-functions/logger');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getStorage } = require('firebase-admin/storage');
-const { detectType, sha256, readFiles, MAX, KEY_FORMAT } = require('./lib');
+const { detectType, sha256, readFiles, audioDuration, MAX, KEY_FORMAT } = require('./lib');
 
 initializeApp();
 const db = getFirestore();
@@ -47,8 +47,10 @@ exports.depot = onRequest(
         });
         try {
           // create() échoue si le document existe déjà (même fichier envoyé au même moment)
+          const duration = audioDuration(f.data);
           await ref.create({
             status: 'inbox', name: f.name, size: f.data.length, type,
+            ...(duration ? { duration } : {}),
             source: 'depot', createdAt: FieldValue.serverTimestamp(),
           });
           ajoutes++;

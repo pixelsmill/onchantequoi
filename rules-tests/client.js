@@ -36,12 +36,12 @@ export function client(db, storage) {
     exists: async (hash) => (await getDoc(doc(db, 'files', hash))).exists(),
 
     // Dépôt, partie Firestore : crée files/{hash} s'il n'existe pas encore
-    addToInbox(hash, { name = 'WhatsApp Audio 2026-09-23 at 22.34.43.mp4', size = 1234, type = 'audio/mp4' } = {}) {
+    addToInbox(hash, { name = 'WhatsApp Audio 2026-09-23 at 22.34.43.mp4', size = 1234, type = 'audio/mp4', duration } = {}) {
       return runTransaction(db, async (tx) => {
         const r = doc(db, 'files', hash);
         const snap = await tx.get(r);
         if (!snap.exists()) {
-          tx.set(r, { status: 'inbox', name, size, type, createdAt: serverTimestamp() });
+          tx.set(r, { status: 'inbox', name, size, type, ...(duration != null ? { duration } : {}), createdAt: serverTimestamp() });
         }
       });
     },

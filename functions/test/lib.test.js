@@ -2,7 +2,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { Readable } = require('node:stream');
-const { detectType, sha256, cleanName, decodeName, readFiles, MAX, KEY_FORMAT } = require('../lib');
+const { detectType, sha256, cleanName, decodeName, readFiles, audioDuration, MAX, KEY_FORMAT } = require('../lib');
 
 const mp4 = Buffer.concat([Buffer.from([0, 0, 0, 0x20]), Buffer.from('ftypM4A '), Buffer.alloc(20)]);
 const latin1 = (s) => Buffer.from(s, 'utf8').toString('latin1'); // UTF-8 brut tel que Node lit un en-tête
@@ -143,4 +143,65 @@ test('readFiles : multipart illisible → erreur (400 dans la fonction)', async 
 
 test('MAX : 30 Mo', () => {
   assert.equal(MAX, 30 * 1024 * 1024);
+});
+
+// Fichiers minimaux : seuls les en-têtes comptent
+const box = (type, ...content) => {
+  const body = Buffer.concat(content.map((c) => (Buffer.isBuffer(c) ? c : Buffer.from(c))));
+  const head = Buffer.alloc(8);
+  head.writeUInt32BE(8 + body.length, 0);
+  head.write(type, 4, 'latin1');
+  return Buffer.concat([head, body]);
+};
+const mvhd = (timescale, duration) => {
+  const b = Buffer.alloc(100);
+  b.writeUInt32BE(timescale, 12);
+  b.writeUInt32BE(duration, 16);
+  return b;
+};
+const oggPage = (granule, payload) => {
+  const h = Buffer.alloc(27);
+  h.write('OggS', 0, 'latin1');
+  h.writeBigUInt64LE(BigInt(granule), 6);
+  h[26] = 1;
+  return Buffer.concat([h, Buffer.from([payload.length]), payload]);
+};
+
+test('audioDuration : MP4/M4A (moov › mvhd), même si moov est en fin de fichier', () => {
+  const ftyp = box('ftyp', 'M4A ', Buffer.alloc(4), 'M4A ');
+  const moov = box('moov', box('mvhd', mvhd(44100, 44100 * 157.5)));
+  assert.equal(audioDuration(Buffer.concat([ftyp, box('mdat', Buffer.alloc(64)), moov])), 157.5);
+  assert.equal(audioDuration(Buffer.concat([ftyp, moov, box('mdat', Buffer.alloc(8))])), 157.5);
+});
+
+test('audioDuration : Ogg Opus (dernière page, moins le pré-saut)', () => {
+  const head = Buffer.alloc(19);
+  head.write('OpusHead', 0, 'latin1');
+  head.writeUInt16LE(312, 10);
+  const file = Buffer.concat([oggPage(0, head), oggPage(48000 * 221.5 + 312, Buffer.from([1, 2, 3]))]);
+  assert.equal(audioDuration(file), 221.5);
+});
+
+test('audioDuration : WAV', () => {
+  const wav = Buffer.alloc(44 + 32000);
+  wav.write('RIFF', 0, 'latin1');
+  wav.writeUInt32LE(36 + 32000, 4);
+  wav.write('WAVEfmt ', 8, 'latin1');
+  wav.writeUInt32LE(16, 16);
+  wav.writeUInt16LE(1, 20); // PCM
+  wav.writeUInt16LE(1, 22); // mono
+  wav.writeUInt32LE(8000, 24);
+  wav.writeUInt32LE(16000, 28); // octets par seconde
+  wav.writeUInt16LE(2, 32);
+  wav.writeUInt16LE(16, 34);
+  wav.write('data', 36, 'latin1');
+  wav.writeUInt32LE(32000, 40);
+  assert.equal(audioDuration(wav), 2);
+});
+
+test('audioDuration : rien pour un format inconnu ou un fichier tronqué', () => {
+  assert.equal(audioDuration(Buffer.from('ID3  ')), undefined);
+  assert.equal(audioDuration(Buffer.from('%PDF-1.4 xxxxx')), undefined);
+  assert.equal(audioDuration(mp4), undefined); // ftyp seul, sans moov
+  assert.equal(audioDuration(Buffer.alloc(0)), undefined);
 });

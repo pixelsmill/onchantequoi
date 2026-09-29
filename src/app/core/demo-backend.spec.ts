@@ -70,29 +70,36 @@ describe('createDemoBackend', () => {
   it('dépôt, doublon, suppression', async () => {
     const file = new Blob(['x'], { type: 'audio/mp4' });
     expect(await b.exists('abc')).toBe(false);
-    await b.upload(file, 'AUD-1.m4a', 'abc', 'audio/mp4');
+    await b.upload(file, { name: 'AUD-1.m4a', hash: 'abc', type: 'audio/mp4', duration: 157.5 });
     expect(await b.exists('abc')).toBe(true);
-    expect(state.inbox.find((f) => f.hash === 'abc')?.name).toBe('AUD-1.m4a');
+    expect(state.inbox.find((f) => f.hash === 'abc')).toMatchObject({ name: 'AUD-1.m4a', duration: 157.5 });
     expect(await b.removeInbox('abc')).toBe(true);
     expect(await b.exists('abc')).toBe(false);
   });
 
-  it('ne supprime pas un audio classé entre-temps, ni un morceau qui a des voix', async () => {
+  it('ne supprime pas un audio classé entre-temps', async () => {
     const [first] = state.inbox;
     await b.classify({ hash: first.hash, voice: 'A', songId: 's3', newTitle: null });
     expect(await b.removeInbox(first.hash)).toBe(false);
     expect(await b.exists(first.hash)).toBe(true);
-    expect(await b.deleteSong('s3')).toBe(false);
-    expect(state.songs.some((s) => s.id === 's3')).toBe(true);
   });
 
-  it('renomme et supprime un morceau', async () => {
+  it('supprime un morceau avec ses enregistrements, s’il n’a pas changé entre-temps', async () => {
+    const s3 = state.songs.find((s) => s.id === 's3') as Song;
+    const hashes = Object.values(s3.voices).map((r) => r!.hash);
+    const [first] = state.inbox;
+    await b.classify({ hash: first.hash, voice: 'H', songId: 's3', newTitle: null }); // voix ajoutée
+    expect(await b.deleteSong('s3', hashes)).toBe(false);
+    expect(state.songs.some((s) => s.id === 's3')).toBe(true);
+    const now = Object.values((state.songs.find((s) => s.id === 's3') as Song).voices).map((r) => r!.hash);
+    expect(await b.deleteSong('s3', now)).toBe(true);
+    expect(state.songs.some((s) => s.id === 's3')).toBe(false);
+    for (const h of now) expect(await b.exists(h)).toBe(false);
+  });
+
+  it('renomme un morceau', async () => {
     await b.renameSong('s3', '  Hallelujah  ');
     expect(state.songs.find((s) => s.id === 's3')?.title).toBe('Hallelujah');
-    const s3 = state.songs.find((s) => s.id === 's3') as Song;
-    for (const [v, r] of Object.entries(s3.voices)) await b.unclassify('s3', v as 'S', r!.hash);
-    expect(await b.deleteSong('s3')).toBe(true);
-    expect(state.songs.find((s) => s.id === 's3')).toBeUndefined();
   });
 
   it('refuse un classement sans morceau valide', async () => {

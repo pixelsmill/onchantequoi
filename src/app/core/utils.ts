@@ -69,8 +69,9 @@ export function isAudioFile(file: { type?: string; name?: string }): boolean {
   return false;
 }
 
-export async function sha256(blob: Blob): Promise<string> {
-  const h = await crypto.subtle.digest('SHA-256', await blob.arrayBuffer());
+export async function sha256(data: Blob | ArrayBuffer): Promise<string> {
+  const buf = data instanceof ArrayBuffer ? data : await data.arrayBuffer();
+  const h = await crypto.subtle.digest('SHA-256', buf);
   return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
@@ -86,11 +87,20 @@ export function keyFromText(text: string): string {
   return t.replace(/^.*cle=/, '').replace(/[^A-Za-z0-9_-]/g, '');
 }
 
-/** Plus récemment mis à jour d'abord, puis par titre */
+/** Par ordre alphabétique : « Siyahamba – début » et « Siyahamba – fin » se suivent */
 export function sortSongs(songs: readonly Song[]): Song[] {
-  return [...songs].sort(
-    (a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0) || a.title.localeCompare(b.title, 'fr'),
+  return [...songs].sort((a, b) =>
+    a.title.localeCompare(b.title, 'fr', { sensitivity: 'base', numeric: true }),
   );
+}
+
+/** 155 → « 2 min 35 », 42 → « 42 s » */
+export function formatDuration(seconds: number | undefined): string {
+  if (seconds == null || !Number.isFinite(seconds) || seconds <= 0) return '';
+  const s = Math.round(seconds);
+  if (s < 60) return `${s} s`;
+  const rest = s % 60;
+  return `${Math.floor(s / 60)} min${rest ? ' ' + String(rest).padStart(2, '0') : ''}`;
 }
 
 export function isFresh(song: Song, now = Date.now()): boolean {
@@ -116,12 +126,18 @@ export function whatsappDate(name: string | undefined): { at: number; time: bool
   return null;
 }
 
-/** « envoyé sur WhatsApp le 23 sept. à 22:34 » */
-export function whatsappLabel(name: string | undefined): string {
+/** « 23 sept. à 22:34 » (ou « 25 sept. » si le nom ne donne pas l'heure) */
+export function whatsappWhen(name: string | undefined): string {
   const w = whatsappDate(name);
   if (!w) return '';
   const hour = new Date(w.at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-  return `envoyé sur WhatsApp le ${dateShort(w.at)}${w.time ? ' à ' + hour : ''}`;
+  return `${dateShort(w.at)}${w.time ? ' à ' + hour : ''}`;
+}
+
+/** « envoyé sur WhatsApp le 23 sept. à 22:34 » */
+export function whatsappLabel(name: string | undefined): string {
+  const when = whatsappWhen(name);
+  return when ? `envoyé sur WhatsApp le ${when}` : '';
 }
 
 export function plural(n: number, one: string, many: string): string {

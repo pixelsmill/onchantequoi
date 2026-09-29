@@ -2,6 +2,7 @@ import { Song } from './models';
 import {
   ago,
   clock,
+  formatDuration,
   guessType,
   isAudioFile,
   isFresh,
@@ -11,6 +12,7 @@ import {
   sortSongs,
   WEEK,
   whatsappLabel,
+  whatsappWhen,
 } from './utils';
 
 describe('utils', () => {
@@ -59,10 +61,33 @@ describe('utils', () => {
     expect(keyFromText('')).toBe('');
   });
 
-  it('sortSongs() : plus récents d’abord, puis par titre', () => {
+  it('sortSongs() : ordre alphabétique (les extraits d’un même morceau se suivent)', () => {
     const s = (id: string, title: string, updatedAt?: number): Song => ({ id, title, voices: {}, updatedAt });
-    const sorted = sortSongs([s('1', 'Bételgeuse', 1), s('2', 'Zèbre', 5), s('3', 'Ave', 1), s('4', 'Écho')]);
-    expect(sorted.map((x) => x.id)).toEqual(['2', '3', '1', '4']);
+    const sorted = sortSongs([
+      s('1', 'Siyahamba – fin', 9),
+      s('2', 'écho', 5),
+      s('3', 'Ave Verum', 1),
+      s('4', 'Siyahamba – début'),
+      s('5', 'Chant 10'),
+      s('6', 'Chant 2'),
+    ]);
+    expect(sorted.map((x) => x.title)).toEqual([
+      'Ave Verum',
+      'Chant 2',
+      'Chant 10',
+      'écho',
+      'Siyahamba – début',
+      'Siyahamba – fin',
+    ]);
+  });
+
+  it('formatDuration()', () => {
+    expect(formatDuration(42.4)).toBe('42 s');
+    expect(formatDuration(60)).toBe('1 min');
+    expect(formatDuration(155)).toBe('2 min 35');
+    expect(formatDuration(240.7)).toBe('4 min 01');
+    expect(formatDuration(undefined)).toBe('');
+    expect(formatDuration(0)).toBe('');
   });
 
   it('isFresh() : mis à jour depuis moins d’une semaine', () => {
@@ -80,6 +105,7 @@ describe('utils', () => {
     expect(whatsappLabel('PTT-20260924-WA0012.opus')).toBe('envoyé sur WhatsApp le 24 sept.');
     expect(whatsappLabel('audio')).toBe('');
     expect(whatsappLabel(undefined)).toBe('');
+    expect(whatsappWhen('WhatsApp Audio 2026-09-16 at 21.47.19.mp4')).toBe('16 sept. à 21:47');
   });
 
   it('plural()', () => {

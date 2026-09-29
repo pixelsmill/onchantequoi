@@ -7,17 +7,19 @@ import {
   inject,
   Injector,
   input,
+  output,
   signal,
   viewChild,
 } from '@angular/core';
 import { TablerIconComponent } from '@tabler/icons-angular';
+import { teacherName } from '../../config';
 import { ChoraleStore } from '../../core/chorale.store';
 import { ClockService } from '../../core/clock.service';
 import { DialogService } from '../../core/dialog.service';
 import { InboxFile, Song, VOICE_NAME, VoiceKey, VOICES } from '../../core/models';
 import { PlayerService } from '../../core/player.service';
 import { ToastService } from '../../core/toast.service';
-import { ago, dateShort, norm, whatsappLabel } from '../../core/utils';
+import { ago, dateShort, formatDuration, norm, whatsappLabel, whatsappWhen } from '../../core/utils';
 import { InboxDrafts } from './inbox-drafts.service';
 
 /** Un audio à classer : on écoute, on touche la voix, on choisit ou crée le morceau */
@@ -27,10 +29,16 @@ import { InboxDrafts } from './inbox-drafts.service';
   imports: [TablerIconComponent],
   templateUrl: './inbox-item.html',
   styleUrl: './inbox-item.scss',
-  host: { class: 'card' },
+  host: { class: 'card', '[class.compact]': '!expanded()', '[class.current]': 'expanded()' },
 })
 export class InboxItem {
   readonly file = input.required<InboxFile>();
+  /** Un seul audio ouvert à la fois : celui qu'on est en train de classer */
+  readonly expanded = input(true);
+  /** Demande d'ouverture (audio replié touché) */
+  readonly expand = output<void>();
+  /** Classé ou supprimé : la liste passe au suivant */
+  readonly done = output<void>();
 
   protected readonly store = inject(ChoraleStore);
   protected readonly player = inject(PlayerService);
@@ -39,10 +47,10 @@ export class InboxItem {
   private readonly dialog = inject(DialogService);
   private readonly toast = inject(ToastService);
   private readonly injector = inject(Injector);
-  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly queryInput = viewChild<ElementRef<HTMLInputElement>>('q');
 
   protected readonly voices = VOICES;
+  protected readonly teacher = teacherName;
   protected readonly voiceName = VOICE_NAME;
   protected readonly dateShort = dateShort;
   protected readonly open = signal(false);
@@ -51,6 +59,9 @@ export class InboxItem {
   protected readonly id = computed(() => 'a' + this.file().hash.slice(0, 16));
   protected readonly received = computed(() => ago(this.file().createdAt, this.clock.now()));
   protected readonly sent = computed(() => whatsappLabel(this.file().name));
+  protected readonly sentShort = computed(() => whatsappWhen(this.file().name));
+  protected readonly duration = computed(() => formatDuration(this.file().duration));
+  protected readonly listened = computed(() => this.drafts.listened(this.file().hash));
   protected readonly draft = computed(() => this.drafts.draft(this.file().hash));
   protected readonly song = computed(() => this.store.songById(this.draft().songId));
   protected readonly chosenTitle = computed(() => this.song()?.title ?? this.draft().newTitle);
@@ -79,6 +90,7 @@ export class InboxItem {
 
   protected togglePlay(): void {
     const f = this.file();
+    this.drafts.markListened(f.hash);
     if (this.player.track()?.hash === f.hash) this.player.toggle();
     else
       this.player.play({
@@ -141,15 +153,7 @@ export class InboxItem {
     this.toast.show(`Classé : ${title} · ${VOICE_NAME[d.voice]}`);
     if (this.player.track()?.hash === f.hash) this.player.stop();
     this.drafts.classified(f.hash, res.songId, newTitle);
-    this.focusNext();
-  }
-
-  /** L'audio va disparaître de la liste : le focus passe au suivant (clavier, lecteur d'écran) */
-  private focusNext(): void {
-    const li = this.host.nativeElement.closest('li');
-    const next = li?.nextElementSibling ?? li?.previousElementSibling;
-    const target = next?.querySelector<HTMLElement>('button') ?? this.host.nativeElement.closest('main');
-    setTimeout(() => target?.focus({ preventScroll: true }), 50);
+    this.done.emit();
   }
 
   protected async remove(): Promise<void> {
@@ -169,7 +173,7 @@ export class InboxItem {
       }
       this.drafts.remove(f.hash);
       this.toast.show('Audio supprimé');
-      this.focusNext();
+      this.done.emit();
     } catch (e) {
       console.warn(e);
       this.toast.show('Oups, réessayez');

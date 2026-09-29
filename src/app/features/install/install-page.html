@@ -29,10 +29,11 @@
             </button>
           }
 
-          <h3>2. Envoyer les audios reçus sur WhatsApp</h3>
+          <h3>2. Envoyer des audios</h3>
           <p>
             Sur iPhone, une app web ne peut pas recevoir de partage. On passe donc par un raccourci
-            <b>« Envoyer à la Chorale »</b>, à installer une seule fois.
+            <b>« Envoyer à la Chorale »</b>, à installer une seule fois. Il marche depuis n'importe
+            quelle app : WhatsApp, Fichiers, Mail, Messages…
           </p>
           @if (shortcutUrl) {
             <a class="primary button" [href]="shortcutUrl" target="_blank" rel="noopener"
@@ -40,12 +41,14 @@
             >
           } @else {
             <p class="muted">
-              Le lien du raccourci n'est pas encore disponible : demandez-le dans le groupe WhatsApp.
+              Le lien du raccourci n'est pas encore disponible : demandez-le dans le groupe de la chorale.
             </p>
           }
           <ol>
-            <li>Dans WhatsApp, faites un appui long sur l'audio, puis touchez <b>Transférer</b>.</li>
-            <li>Touchez l'icône <b>Partager</b> (le carré avec une flèche vers le haut).</li>
+            <li>
+              Dans l'app où se trouve l'audio, touchez <b>Partager</b> (le carré avec une flèche vers
+              le haut).
+            </li>
             <li>
               Choisissez <b>« Envoyer à la Chorale »</b> (touchez <b>Plus</b> si vous ne le voyez pas).
             </li>
@@ -53,8 +56,8 @@
             <li>Une notification confirme l'envoi : l'audio attend dans « À classer ».</li>
           </ol>
           <p class="muted">
-            Sans le raccourci : enregistrez l'audio dans <b>Fichiers</b> depuis WhatsApp, puis utilisez
-            le bouton <b>Déposer</b> de l'app.
+            Sans le raccourci : enregistrez l'audio dans <b>Fichiers</b>, puis utilisez le bouton
+            <b>Déposer</b> de l'app.
           </p>
 
           <details class="sub">
@@ -75,7 +78,7 @@
               </li>
               <li>Toujours dans la boucle : <b>« Afficher la notification »</b> avec le <i>Contenu de l'URL</i>.</li>
               <li>
-                Testez depuis WhatsApp, puis partagez-le : <b>Partager</b> → <b>Copier le lien iCloud</b>.
+                Testez-le avec un audio, puis partagez-le : <b>Partager</b> → <b>Copier le lien iCloud</b>.
                 Postez ce lien dans le groupe (et collez-le dans <code>shortcutUrl</code> de
                 <code>src/app/config.ts</code> pour qu'il apparaisse ici).
               </li>
@@ -106,24 +109,30 @@
             </ol>
           }
 
-          <h3>2. Envoyer les audios reçus sur WhatsApp</h3>
+          <h3>2. Envoyer des audios</h3>
           <ol>
-            <li>Dans WhatsApp, sélectionnez un ou plusieurs audios (appui long).</li>
-            <li>Touchez <b>Partager</b>, puis choisissez <b>Chorale</b>.</li>
+            <li>
+              Depuis n'importe quelle app (WhatsApp, Fichiers, Gmail…), sélectionnez un ou plusieurs
+              audios.
+            </li>
+            <li>Touchez <b>Partager</b>, puis choisissez <b>« {{ appName }} »</b>.</li>
             <li>L'app s'ouvre et envoie les audios dans « À classer ».</li>
           </ol>
-          <p class="muted">L'app doit être installée pour apparaître dans la liste de partage.</p>
+          <p class="muted">
+            L'app doit être installée pour apparaître dans la liste de partage. Sinon, utilisez le
+            bouton <b>Déposer</b>.
+          </p>
         </details>
       }
       @case ('desktop') {
         <details class="card" [open]="pwa.platform === 'desktop'">
           <summary>Ordinateur</summary>
           <ol>
-            <li>Enregistrez les audios depuis WhatsApp (Web ou application).</li>
             <li>
-              Glissez-les <b>n'importe où sur la page</b> de l'app, ou utilisez le bouton <b>Déposer</b>.
+              Glissez les fichiers audio <b>n'importe où sur la page</b> (depuis l'explorateur de
+              fichiers, un mail, un téléchargement…), ou utilisez le bouton <b>Déposer</b>.
             </li>
-            <li>Ils arrivent dans « À classer ».</li>
+            <li>Ils arrivent dans « À classer ». Les doublons sont reconnus et ignorés.</li>
           </ol>
         </details>
       }

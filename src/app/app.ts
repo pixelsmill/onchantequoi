@@ -48,9 +48,9 @@ export class App {
   constructor() {
     this.store.init();
     if (new URLSearchParams(globalThis.location?.search).get('partage') === 'echec') {
-      inject(ToastService).show("Le partage n'a pas pu être reçu : réessayez depuis WhatsApp", 6000);
+      inject(ToastService).show("Le partage n'a pas pu être reçu : réessayez", 6000);
     }
-    // Audios partagés depuis WhatsApp (Android) : envoyés dès que l'accès est ouvert
+    // Audios partagés depuis une autre app (Android) : envoyés dès que l'accès est ouvert
     effect(() => {
       if (this.store.status() === 'ready') {
         untracked(() => this.uploads.takeShared().catch((e) => console.warn(e)));

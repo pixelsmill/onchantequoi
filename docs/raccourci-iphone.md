@@ -1,6 +1,6 @@
 # Raccourci iPhone « Envoyer à la Chorale »
 
-Sur Android, l'appli de la chorale peut recevoir directement les fichiers qu'on lui « partage » depuis WhatsApp. Sur iPhone, ce n'est malheureusement pas possible : une appli web (même installée sur l'écran d'accueil) ne peut pas apparaître comme destination dans la feuille de partage d'iOS. Il n'y a pas de contournement.
+Sur Android, l'appli de la chorale peut recevoir directement les fichiers qu'on lui « partage » depuis n'importe quelle app (WhatsApp, Fichiers, Mail…). Sur iPhone, ce n'est malheureusement pas possible : une appli web (même installée sur l'écran d'accueil) ne peut pas apparaître comme destination dans la feuille de partage d'iOS. Il n'y a pas de contournement.
 
 La solution d'Apple pour ce genre de cas s'appelle un **raccourci** (l'app Raccourcis, préinstallée sur tous les iPhone). Un raccourci peut, lui, apparaître dans la feuille de partage, récupérer un fichier audio et l'envoyer directement au serveur de la chorale.
 
@@ -10,7 +10,7 @@ Petite contrainte technique : on ne peut pas simplement générer un fichier de 
 2. Le **partager par un lien iCloud** dans le groupe WhatsApp de la chorale ;
 3. Chaque choriste sur iPhone **installe ce raccourci** en un clic depuis le lien, une seule fois aussi.
 
-Ensuite, au quotidien, envoyer un audio à la chorale depuis WhatsApp ne prend que quelques secondes.
+Ensuite, au quotidien, envoyer un audio à la chorale depuis n'importe quelle app (WhatsApp, Fichiers, Mail, Messages…) ne prend que quelques secondes.
 
 > Les libellés exacts de l'app Raccourcis ci-dessous ont été vérifiés sur la documentation officielle Apple (en français, versions iOS 18 et iOS 26). Quelques détails plus fins (certains noms de champs secondaires, et le comportement précis du menu de partage de WhatsApp, qui change souvent) n'ont pas pu être vérifiés à 100 % : ils sont signalés par ⚠️ et donnés avec leur équivalent anglais entre parenthèses, au cas où l'écran de votre iPhone afficherait un mot légèrement différent.
 
@@ -50,7 +50,7 @@ https://VOTRE-PROJET.web.app/api/depot?cle=VOTRE-CLE
 8. **Toujours dans la boucle**, juste après, ajoutez l'action **Afficher la notification** (cherchez « afficher la notification ») et mettez, comme texte, la variable magique renvoyée par l'action **Obtenir le contenu de l'URL** juste au-dessus (le texte que répond le serveur, par exemple *1 audio envoyé dans « À classer »*).
 9. Vérifiez que ces deux actions (7 et 8) sont bien **entre** les repères **Répéter pour chaque élément** et **Fin de la récurrence** de l'étape 6.
 10. Touchez **Terminé** en haut à droite pour enregistrer.
-11. **Testez-le tout de suite** : depuis WhatsApp, partagez-vous un fichier audio à vous-même (ou utilisez un audio déjà reçu) et essayez le raccourci (voir la section *Envoyer des audios depuis WhatsApp* ci-dessous). Vous devez voir une notification avec la réponse du serveur.
+11. **Testez-le tout de suite** : depuis WhatsApp ou l'app Fichiers, partagez-vous un fichier audio à vous-même (ou utilisez un audio déjà reçu) et essayez le raccourci (voir la section *Envoyer des audios depuis WhatsApp* ci-dessous). Vous devez voir une notification avec la réponse du serveur.
 
 ---
 
@@ -77,11 +77,13 @@ Pour chaque choriste qui reçoit le lien dans WhatsApp :
 1. Touchez le lien reçu dans WhatsApp (il ressemble à `https://www.icloud.com/shortcuts/...`). Cela ouvre l'app Raccourcis avec un aperçu du raccourci **Envoyer à la Chorale**.
 2. Touchez **Obtenir le raccourci**. Il est ajouté à votre collection de raccourcis (onglet **Raccourcis**).
 3. La **première fois seulement** que vous l'utilisez, iOS va probablement afficher une ou deux fenêtres de confidentialité, du type *« Autoriser "Raccourcis" à se connecter à … ? »*. Touchez **Toujours autoriser** (sinon la question reviendra à chaque envoi).
-4. C'est prêt : le raccourci est maintenant disponible dans la feuille de partage de WhatsApp (voir ci-dessous). Si vous ne le voyez pas tout de suite dans la liste, regardez la section *En cas de souci*.
+4. C'est prêt : le raccourci est maintenant disponible dans la feuille de partage de toutes vos apps (voir ci-dessous). Si vous ne le voyez pas tout de suite dans la liste, regardez la section *En cas de souci*.
 
 ---
 
-## Envoyer des audios depuis WhatsApp
+## Envoyer des audios
+
+Depuis n'importe quelle app où se trouve l'audio (WhatsApp, Fichiers, Mail, Messages…) : touchez **Partager**, puis **Envoyer à la Chorale**. Deux exemples détaillés :
 
 ### Depuis une conversation WhatsApp
 
@@ -116,9 +118,9 @@ La clé secrète contenue dans le raccourci n'est plus valable (elle a été cha
 **Un fichier ne part pas (audio trop long ou trop lourd)**
 Le serveur de la chorale refuse les fichiers de plus de **30 Mo** environ. Un message audio WhatsApp classique fait quelques Mo, donc ce cas est rare (cela peut arriver avec un enregistrement de répétition complète très long).
 
-**Le raccourci n'apparaît pas dans la feuille de partage de WhatsApp**
+**Le raccourci n'apparaît pas dans la feuille de partage**
 - Ouvrez l'app Raccourcis, vérifiez que **« Dans la feuille de partage »** est bien activé dans les Détails du raccourci, et que les types acceptés incluent bien **Fichiers** et **Supports**.
-- Dans la feuille de partage de WhatsApp, tout en bas de la première rangée d'icônes, touchez **Plus** (ou l'icône **···**) : une liste d'apps et de raccourcis s'affiche, avec des interrupteurs. Activez **Envoyer à la Chorale**, et si vous voulez, remontez-le en haut de la liste avec la poignée **☰** pour l'avoir toujours sous la main.
+- Dans la feuille de partage, tout en bas de la première rangée d'icônes, touchez **Plus** (ou l'icône **···**) : une liste d'apps et de raccourcis s'affiche, avec des interrupteurs. Activez **Envoyer à la Chorale**, et si vous voulez, remontez-le en haut de la liste avec la poignée **☰** pour l'avoir toujours sous la main.
 
 **Une fenêtre demande d'autoriser Raccourcis à se connecter à un site**
 C'est normal la première fois : touchez **Toujours autoriser**. C'est la vérification de sécurité standard d'iOS quand un raccourci contacte un site internet pour la première fois ; elle ne redemandera plus ensuite.
@@ -129,13 +131,12 @@ C'est normal la première fois : touchez **Toujours autoriser**. C'est la vérif
 
 1. Recevez le lien du raccourci dans le groupe WhatsApp de la chorale et touchez-le.
 2. Touchez **Obtenir le raccourci** dans l'app Raccourcis.
-3. Ouvrez WhatsApp, dans la conversation avec les audios.
-4. Faites un appui long sur l'audio à envoyer.
-5. Touchez **Transférer**, puis l'icône de partage.
-6. Choisissez **Envoyer à la Chorale** dans la liste (touchez **Plus** si vous ne la voyez pas).
-7. La première fois, une fenêtre demande d'autoriser la connexion : touchez **Toujours autoriser**.
-8. Attendez quelques secondes : une notification confirme l'envoi (par exemple « 1 audio envoyé »).
-9. Si le message dit « déjà reçu », c'est normal, quelqu'un l'a déjà envoyé avant vous.
-10. Si le message parle de « lien invalide », prévenez l'organisateur : la clé a changé, il faut réinstaller le raccourci.
-11. Vous pouvez répéter l'opération pour plusieurs audios à la suite, un par un.
-12. Ensuite, allez classer les audios reçus dans la webapp de la chorale (voix, puis morceau).
+3. Ouvrez l'app où se trouve l'audio (WhatsApp, Fichiers, Mail…).
+4. Touchez **Partager** (dans WhatsApp : appui long sur l'audio, puis **Transférer** et l'icône de partage).
+5. Choisissez **Envoyer à la Chorale** dans la liste (touchez **Plus** si vous ne la voyez pas).
+6. La première fois, une fenêtre demande d'autoriser la connexion : touchez **Toujours autoriser**.
+7. Attendez quelques secondes : une notification confirme l'envoi (par exemple « 1 audio envoyé »).
+8. Si le message dit « déjà reçu », c'est normal, quelqu'un l'a déjà envoyé avant vous.
+9. Si le message parle de « lien invalide », prévenez l'organisateur : la clé a changé, il faut réinstaller le raccourci.
+10. Vous pouvez répéter l'opération pour plusieurs audios à la suite, un par un.
+11. Ensuite, allez classer les audios reçus dans la webapp de la chorale (voix, puis morceau).

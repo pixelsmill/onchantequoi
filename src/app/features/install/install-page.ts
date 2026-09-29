@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TablerIconComponent } from '@tabler/icons-angular';
-import { shortcutUrl } from '../../config';
+import { choirName, shortcutUrl } from '../../config';
 import { ChoraleStore } from '../../core/chorale.store';
 import { Platform, PwaService } from '../../core/pwa.service';
 import { ToastService } from '../../core/toast.service';
@@ -19,6 +19,7 @@ export class InstallPage {
   protected readonly store = inject(ChoraleStore);
   private readonly toast = inject(ToastService);
   protected readonly shortcutUrl = shortcutUrl;
+  protected readonly appName = choirName;
   private readonly origin = globalThis.location?.origin ?? '';
 
   /** Lien d'invitation de la chorale (avec la clé de ce téléphone) */

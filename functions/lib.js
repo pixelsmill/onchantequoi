@@ -84,4 +84,82 @@ async function readFiles(req, max = MAX) {
   });
 }
 
-module.exports = { detectType, sha256, cleanName, decodeName, readFiles, MAX, KEY_FORMAT };
+// Durée en secondes lue dans l'en-tête (MP4/M4A, Ogg Opus ou Vorbis, WAV), sans décoder l'audio.
+// Même logique que src/app/core/audio-duration.ts (dépôts depuis l'app).
+function findBox(buf, start, end, type) {
+  let off = start;
+  while (off + 8 <= end) {
+    let size = buf.readUInt32BE(off);
+    let header = 8;
+    if (size === 1 && off + 16 <= end) {
+      size = Number(buf.readBigUInt64BE(off + 8));
+      header = 16;
+    } else if (size === 0) {
+      size = end - off;
+    }
+    if (size < header) return undefined;
+    if (buf.toString('latin1', off + 4, off + 8) === type) return { start: off + header, end: Math.min(end, off + size) };
+    off += size;
+  }
+  return undefined;
+}
+
+function mp4Duration(buf) {
+  if (buf.length < 12 || buf.toString('latin1', 4, 8) !== 'ftyp') return undefined;
+  const moov = findBox(buf, 0, buf.length, 'moov');
+  const mvhd = moov && findBox(buf, moov.start, moov.end, 'mvhd');
+  if (!mvhd || mvhd.start + 1 > buf.length) return undefined;
+  const v1 = buf[mvhd.start] === 1;
+  if (mvhd.start + (v1 ? 32 : 20) > buf.length) return undefined;
+  const timescale = buf.readUInt32BE(mvhd.start + (v1 ? 20 : 12));
+  const duration = v1 ? Number(buf.readBigUInt64BE(mvhd.start + 24)) : buf.readUInt32BE(mvhd.start + 16);
+  return timescale ? duration / timescale : undefined;
+}
+
+function oggDuration(buf) {
+  if (buf.length < 28 || buf.toString('latin1', 0, 4) !== 'OggS') return undefined;
+  const head = buf.subarray(0, Math.min(buf.length, 4096));
+  let rate = 0;
+  let preskip = 0;
+  const opus = head.indexOf('OpusHead', 0, 'latin1');
+  if (opus >= 0 && opus + 12 <= buf.length) {
+    rate = 48000; // Opus compte toujours en échantillons à 48 kHz
+    preskip = buf.readUInt16LE(opus + 10);
+  } else {
+    const vorbis = head.indexOf('\x01vorbis', 0, 'latin1');
+    if (vorbis < 0 || vorbis + 16 > buf.length) return undefined;
+    rate = buf.readUInt32LE(vorbis + 12);
+  }
+  const last = buf.lastIndexOf('OggS', buf.length - 27, 'latin1');
+  if (last < 0) return undefined;
+  const granule = Number(buf.readBigUInt64LE(last + 6));
+  return rate ? (granule - preskip) / rate : undefined;
+}
+
+function wavDuration(buf) {
+  if (buf.length < 12 || buf.toString('latin1', 0, 4) !== 'RIFF' || buf.toString('latin1', 8, 12) !== 'WAVE') return undefined;
+  let byteRate = 0;
+  let dataSize = 0;
+  let off = 12;
+  while (off + 8 <= buf.length) {
+    const id = buf.toString('latin1', off, off + 4);
+    const size = buf.readUInt32LE(off + 4);
+    if (id === 'fmt ' && off + 20 <= buf.length) byteRate = buf.readUInt32LE(off + 16);
+    if (id === 'data') dataSize = size;
+    off += 8 + size + (size % 2);
+  }
+  return byteRate && dataSize ? dataSize / byteRate : undefined;
+}
+
+// Durée arrondie au dixième, ou undefined (format non reconnu, fichier tronqué)
+function audioDuration(buf) {
+  let d;
+  try {
+    d = mp4Duration(buf) ?? oggDuration(buf) ?? wavDuration(buf);
+  } catch {
+    d = undefined;
+  }
+  return d != null && Number.isFinite(d) && d > 0 && d < 36000 ? Math.round(d * 10) / 10 : undefined;
+}
+
+module.exports = { detectType, sha256, cleanName, decodeName, readFiles, audioDuration, MAX, KEY_FORMAT };

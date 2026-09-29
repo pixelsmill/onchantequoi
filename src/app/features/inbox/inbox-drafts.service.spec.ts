@@ -58,6 +58,14 @@ describe('InboxDrafts', () => {
     expect(drafts.draft('b').songId).toBeNull();
   });
 
+  it('retient les audios écoutés pendant la visite', () => {
+    expect(drafts.listened('a')).toBe(false);
+    drafts.markListened('a');
+    drafts.markListened('a');
+    expect(drafts.listened('a')).toBe(true);
+    expect(drafts.listened('b')).toBe(false);
+  });
+
   it('oublie les brouillons des audios qui ne sont plus à classer', () => {
     drafts.update('b', { voice: 'S' });
     store.inbox.set([file('c')]);

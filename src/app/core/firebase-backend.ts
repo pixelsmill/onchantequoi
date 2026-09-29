@@ -34,6 +34,12 @@ import {
 } from 'firebase/storage';
 import { Backend, ClassifyResult, InboxFile, JoinResult, Recording, Song } from './models';
 
+/** Enregistrements (empreintes) d'un morceau, triés, pour comparer */
+const hashesOf = (voices: Record<string, Recording> | undefined): string[] =>
+  Object.values(voices ?? {})
+    .map((r) => r.hash)
+    .sort();
+
 export interface FirebaseBackendOptions {
   /** Émulateurs locaux (firebase emulators:start), pour le développement */
   emulators?: boolean;
@@ -171,6 +177,7 @@ export async function createFirebaseBackend(
                 size: x['size'],
                 type: x['type'],
                 source: x['source'],
+                duration: typeof x['duration'] === 'number' ? x['duration'] : undefined,
                 createdAt: millis(x['createdAt']) ?? Date.now(),
               };
             }),
@@ -184,7 +191,7 @@ export async function createFirebaseBackend(
       return (await getDoc(fileDoc(hash))).exists();
     },
 
-    async upload(file, name, hash, type, onProgress) {
+    async upload(file, { name, hash, type, duration }, onProgress) {
       const task = uploadBytesResumable(audioRef(hash), file, { contentType: type });
       await new Promise<void>((resolve, reject) =>
         task.on(
@@ -197,7 +204,14 @@ export async function createFirebaseBackend(
       const fileRef = fileDoc(hash);
       await runTransaction(db, async (tx) => {
         if (!(await tx.get(fileRef)).exists()) {
-          tx.set(fileRef, { status: 'inbox', name, size: file.size, type, createdAt: serverTimestamp() });
+          tx.set(fileRef, {
+            status: 'inbox',
+            name,
+            size: file.size,
+            type,
+            ...(duration != null ? { duration } : {}),
+            createdAt: serverTimestamp(),
+          });
         }
       });
     },
@@ -278,16 +292,22 @@ export async function createFirebaseBackend(
       await updateDoc(doc(db, 'songs', songId), { title: title.trim() });
     },
 
-    deleteSong(songId) {
-      // Seulement s'il est toujours vide (une voix a pu être classée entre-temps)
-      return runTransaction(db, async (tx) => {
+    async deleteSong(songId, hashes) {
+      // Seulement s'il contient toujours exactement les enregistrements annoncés
+      const expected = [...hashes].sort();
+      const removed = await runTransaction(db, async (tx) => {
         const ref = doc(db, 'songs', songId);
         const snap = await tx.get(ref);
-        if (!snap.exists()) return true;
-        if (Object.keys(snap.data()['voices'] ?? {}).length) return false;
+        if (!snap.exists()) return [];
+        const current = hashesOf(snap.data()['voices']);
+        if (current.join() !== expected.join()) return null;
+        current.forEach((h) => tx.delete(fileDoc(h)));
         tx.delete(ref);
-        return true;
+        return current;
       });
+      if (!removed) return false;
+      removed.forEach((h) => deleteObject(audioRef(h)).catch(() => undefined));
+      return true;
     },
 
     url(hash, refresh = false) {

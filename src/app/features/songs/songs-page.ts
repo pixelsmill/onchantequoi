@@ -1,9 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { TablerIconComponent } from '@tabler/icons-angular';
+import { teacherName } from '../../config';
 import { ChoraleStore } from '../../core/chorale.store';
 import { ClockService } from '../../core/clock.service';
 import { DialogService, MenuAction } from '../../core/dialog.service';
-import { Song, VoiceKey, VOICES } from '../../core/models';
+import { Song, VOICE_NAME, VoiceKey, VOICES } from '../../core/models';
 import { PlayerService } from '../../core/player.service';
 import { ToastService } from '../../core/toast.service';
 import { ago, dateShort, isFresh, norm } from '../../core/utils';
@@ -23,6 +24,7 @@ export class SongsPage {
   private readonly dialog = inject(DialogService);
   private readonly toast = inject(ToastService);
   protected readonly voices = VOICES;
+  protected readonly teacher = teacherName;
   protected readonly dateShort = dateShort;
   protected readonly query = signal('');
   protected readonly filtered = computed(() => {
@@ -49,10 +51,20 @@ export class SongsPage {
   }
 
   protected async menu(song: Song): Promise<void> {
-    const empty = !Object.keys(song.voices ?? {}).length;
-    const actions: MenuAction[] = [{ id: 'rename', label: 'Renommer' }];
-    if (empty) actions.push({ id: 'delete', label: 'Supprimer le morceau', danger: true });
-    const note = empty ? '' : 'Pour corriger une voix, lancez-la puis touchez « Mal classé ? ».';
+    // Enregistrements du morceau, dans l'ordre S · A · H · Tous
+    const recs = VOICES.flatMap((v) => {
+      const r = song.voices?.[v.key];
+      return r ? [{ voice: v.key, hash: r.hash }] : [];
+    });
+    const actions: MenuAction[] = [
+      { id: 'rename', label: 'Renommer' },
+      {
+        id: 'delete',
+        label: recs.length ? 'Supprimer le morceau et ses enregistrements' : 'Supprimer le morceau',
+        danger: true,
+      },
+    ];
+    const note = recs.length ? 'Pour corriger une voix, lancez-la puis touchez « Mal classé ? ».' : '';
     const choice = await this.dialog.menu(song.title, actions, note);
     try {
       if (choice === 'rename') {
@@ -62,13 +74,24 @@ export class SongsPage {
           this.toast.show('Morceau renommé');
         }
       }
-      if (
-        choice === 'delete' &&
-        (await this.dialog.confirm('Supprimer ce morceau ?', song.title, 'Supprimer', true))
-      ) {
-        const done = await this.store.deleteSong(song.id);
+      if (choice === 'delete') {
+        const voices = recs.map((r) => VOICE_NAME[r.voice]).join(', ');
+        const what = recs.length === 1 ? 'son enregistrement' : `ses ${recs.length} enregistrements`;
+        const text = recs.length
+          ? `« ${song.title} » et ${what} (${voices}) seront supprimés pour tout le monde.`
+          : `« ${song.title} » sera supprimé.`;
+        const ok = await this.dialog.confirm(
+          'Supprimer ce morceau ?',
+          text,
+          recs.length ? 'Tout supprimer' : 'Supprimer',
+          true,
+        );
+        if (!ok) return;
+        const hashes = recs.map((r) => r.hash);
+        if (hashes.includes(this.player.track()?.hash ?? '')) this.player.stop();
+        const done = await this.store.deleteSong(song.id, hashes);
         this.toast.show(
-          done ? 'Morceau supprimé' : "Une voix vient d'y être classée : le morceau est gardé",
+          done ? 'Morceau supprimé' : 'Le morceau vient de changer : vérifiez, puis recommencez',
         );
       }
     } catch (e) {

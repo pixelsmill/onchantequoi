@@ -3,6 +3,7 @@ import { provideRouter, withInMemoryScrolling } from '@angular/router';
 import { provideServiceWorker } from '@angular/service-worker';
 import {
   IconCheck,
+  IconChevronDown,
   IconCopy,
   IconDeviceMobile,
   IconDots,
@@ -22,6 +23,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes, withInMemoryScrolling({ scrollPositionRestoration: 'enabled' })),
     provideTablerIcons({
       IconCheck,
+      IconChevronDown,
       IconCopy,
       IconDeviceMobile,
       IconDots,
@@ -31,7 +33,7 @@ export const appConfig: ApplicationConfig = {
       IconUpload,
       IconX,
     }),
-    // sw.js = service worker Angular + réception des partages WhatsApp (Android)
+    // sw.js = service worker Angular + réception des partages (Android)
     provideServiceWorker('sw.js', {
       enabled: !isDevMode(),
       registrationStrategy: 'registerWhenStable:30000',

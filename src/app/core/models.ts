@@ -41,7 +41,18 @@ export interface InboxFile {
   size?: number;
   type?: string;
   source?: string;
+  /** Durée en secondes (calculée au dépôt) */
+  duration?: number;
   createdAt: number;
+}
+
+/** Ce qu'on enregistre avec un audio déposé */
+export interface UploadMeta {
+  name: string;
+  /** Empreinte SHA-256 = identifiant du fichier */
+  hash: string;
+  type: string;
+  duration?: number;
 }
 
 export interface ClassifyRequest {
@@ -67,13 +78,7 @@ export interface Backend {
   onSongs(cb: (songs: Song[]) => void, onError: (e: unknown) => void): () => void;
   onInbox(cb: (files: InboxFile[]) => void, onError: (e: unknown) => void): () => void;
   exists(hash: string): Promise<boolean>;
-  upload(
-    file: Blob,
-    name: string,
-    hash: string,
-    type: string,
-    onProgress?: (fraction: number) => void,
-  ): Promise<void>;
+  upload(file: Blob, meta: UploadMeta, onProgress?: (fraction: number) => void): Promise<void>;
   /** Classe un audio (le premier qui classe gagne). Remplace l'ancien enregistrement de la même voix. */
   classify(req: ClassifyRequest): Promise<ClassifyResult>;
   /** « Mal classé ? » : remet l'audio dans À classer. false s'il n'occupe plus cette voix. */
@@ -81,8 +86,11 @@ export interface Backend {
   /** Supprime un audio encore à classer. false s'il a été classé entre-temps. */
   removeInbox(hash: string): Promise<boolean>;
   renameSong(songId: string, title: string): Promise<void>;
-  /** Supprime un morceau vide. false s'il a reçu une voix entre-temps. */
-  deleteSong(songId: string): Promise<boolean>;
+  /**
+   * Supprime un morceau et ses enregistrements (ceux montrés à l'utilisateur : hashes).
+   * false si le morceau a changé entre-temps (voix ajoutée ou remplacée).
+   */
+  deleteSong(songId: string, hashes: string[]): Promise<boolean>;
   /** Adresse de lecture ; refresh pour ignorer le cache (jeton périmé) */
   url(hash: string, refresh?: boolean): Promise<string>;
 }

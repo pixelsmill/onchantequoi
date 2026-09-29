@@ -60,6 +60,7 @@ export function createDemoBackend(now = Date.now(), delay = 150): Backend {
       hash,
       status: 'inbox',
       name: `WhatsApp Audio ${waDay} at 21.${10 + n}.05.mp4`,
+      duration: 6,
       createdAt: now,
       ...meta,
     });
@@ -117,11 +118,19 @@ export function createDemoBackend(now = Date.now(), delay = 150): Backend {
     async exists(hash) {
       return files.has(hash);
     },
-    upload(file, name, hash, type, onProgress) {
+    upload(file, { name, hash, type, duration }, onProgress) {
       onProgress?.(1);
       return later(() => {
         blobs.set(hash, file);
-        files.set(hash, { hash, status: 'inbox', name, size: file.size, type, createdAt: Date.now() });
+        files.set(hash, {
+          hash,
+          status: 'inbox',
+          name,
+          size: file.size,
+          type,
+          duration,
+          createdAt: Date.now(),
+        });
         emit();
       });
     },
@@ -172,10 +181,13 @@ export function createDemoBackend(now = Date.now(), delay = 150): Backend {
         emit();
       });
     },
-    deleteSong(id) {
+    deleteSong(id, hashes) {
       return later(() => {
         const s = songs.get(id);
-        if (!s || Object.keys(s.voices).length) return false;
+        if (!s) return true;
+        const current = Object.values(s.voices).map((r) => r.hash).sort();
+        if (current.join() !== [...hashes].sort().join()) return false;
+        current.forEach(forget);
         songs.delete(id);
         emit();
         return true;

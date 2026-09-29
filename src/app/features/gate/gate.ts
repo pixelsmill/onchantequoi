@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { ChoraleStore } from '../../core/chorale.store';
 import { keyFromText } from '../../core/utils';
 
-/** Accueil sans clé : on colle le lien de la chorale reçu sur WhatsApp */
+/** Accueil sans clé : on colle le lien de la chorale */
 @Component({
   selector: 'app-gate',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -12,7 +12,7 @@ import { keyFromText } from '../../core/utils';
       <p aria-live="polite">
         {{
           store.gateMessage() ||
-            'Ouvrez le lien de la chorale reçu sur WhatsApp, ou collez-le ici :'
+            'Ouvrez le lien de la chorale, ou collez-le ici :'
         }}
       </p>
       <form (submit)="$event.preventDefault(); submit()">

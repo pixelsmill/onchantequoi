@@ -7,16 +7,35 @@
   >
     <tabler-icon [icon]="playing() ? 'player-pause-filled' : 'player-play-filled'" [size]="20" />
   </button>
-  <div class="meta">
-    <b>Enregistrement reçu</b>
-    <span>{{ received() }}</span>
-    @if (sent(); as s) {
-      <span class="sent">{{ s }}</span>
-    }
-  </div>
+  @if (expanded()) {
+    <div class="meta">
+      <b>Enregistrement reçu@if (duration(); as d) {<span class="dur"> · {{ d }}</span>}</b>
+      <span>{{ received() }}</span>
+      @if (sent(); as s) {
+        <span class="sent">{{ s }}</span>
+      }
+    </div>
+  } @else {
+    <!-- Replié : une ligne qui distingue cet audio des autres ; la toucher l'ouvre -->
+    <button type="button" class="summary" aria-expanded="false" (click)="expand.emit()">
+      <span class="meta">
+        <b>{{ duration() || 'Enregistrement' }}</b>
+        <span>{{ sentShort() || 'reçu ' + received() }}</span>
+      </span>
+      @if (draft().voice; as v) {
+        <span class="tag" [attr.data-v]="v">{{ voiceName[v] }}</span>
+      }
+      @if (listened()) {
+        <span class="tag">écouté</span>
+      }
+      <tabler-icon icon="chevron-down" [size]="20" />
+    </button>
+  }
 </div>
 
-<div class="label" [id]="id() + '-voix'">Voix annoncée par le prof</div>
+@if (expanded()) {
+
+<div class="label" [id]="id() + '-voix'">Voix annoncée par {{ teacher }}</div>
 <div class="pills" role="group" [attr.aria-labelledby]="id() + '-voix'">
   @for (v of voices; track v.key) {
     <button
@@ -85,3 +104,4 @@
   </button>
   <button type="button" class="link-btn danger" (click)="remove()">Supprimer</button>
 </div>
+}

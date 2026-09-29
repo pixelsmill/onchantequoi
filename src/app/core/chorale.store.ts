@@ -1,6 +1,6 @@
 import { computed, Injectable, signal } from '@angular/core';
 import { choirName, demoOnly, firebaseConfig } from '../config';
-import { Backend, ClassifyRequest, ClassifyResult, InboxFile, Song, VoiceKey } from './models';
+import { Backend, ClassifyRequest, ClassifyResult, InboxFile, Song, UploadMeta, VoiceKey } from './models';
 import { keyFromText, sortSongs } from './utils';
 
 export const KEY_STORE = 'chorale-cle';
@@ -8,7 +8,7 @@ const EMU_STORE = 'chorale-emu';
 const DEMO_STORE = 'chorale-demo';
 
 const INVALID =
-  "Ce lien n'est pas (ou plus) valide. Demandez le lien à jour dans le groupe WhatsApp.";
+  "Ce lien n'est pas (ou plus) valide. Demandez le lien à jour dans le groupe de la chorale.";
 const NETWORK =
   'Impossible de vérifier le lien pour le moment : vérifiez la connexion internet, puis réessayez.';
 
@@ -189,14 +189,8 @@ export class ChoraleStore {
     return this.api.exists(hash);
   }
 
-  upload(
-    file: Blob,
-    name: string,
-    hash: string,
-    type: string,
-    onProgress?: (f: number) => void,
-  ): Promise<void> {
-    return this.api.upload(file, name, hash, type, onProgress);
+  upload(file: Blob, meta: UploadMeta, onProgress?: (f: number) => void): Promise<void> {
+    return this.api.upload(file, meta, onProgress);
   }
 
   classify(req: ClassifyRequest): Promise<ClassifyResult> {
@@ -215,8 +209,8 @@ export class ChoraleStore {
     return this.api.renameSong(songId, title);
   }
 
-  deleteSong(songId: string): Promise<boolean> {
-    return this.api.deleteSong(songId);
+  deleteSong(songId: string, hashes: string[]): Promise<boolean> {
+    return this.api.deleteSong(songId, hashes);
   }
 
   url(hash: string, refresh = false): Promise<string> {

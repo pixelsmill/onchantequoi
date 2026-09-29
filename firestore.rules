@@ -65,15 +65,17 @@ service cloud.firestore {
       return x is map && x.keys().hasOnly(['hash', 'at']) && isSha256(x.hash) && x.at is number;
     }
 
-    // name, size et type sont facultatifs : « Mal classé ? » recrée un document minimal s'il a disparu
+    // name, size, type et duration (secondes) sont facultatifs : « Mal classé ? » recrée un
+    // document minimal s'il a disparu
     function validNewFile(d) {
-      return d.keys().hasOnly(['status', 'name', 'size', 'type', 'createdAt', 'source'])
+      return d.keys().hasOnly(['status', 'name', 'size', 'type', 'duration', 'createdAt', 'source'])
         && d.status == 'inbox'
         && d.createdAt == request.time
         && (!('name' in d) || (d.name is string && d.name.size() <= 500))
         && (!('size' in d) || (d['size'] is number && d['size'] >= 0))
         && (!('type' in d) || (d['type'] is string && d['type'].size() <= 200))
-        && (!('source' in d) || (d.source is string && d.source.size() <= 50));
+        && (!('source' in d) || (d.source is string && d.source.size() <= 50))
+        && (!('duration' in d) || (d.duration is number && d.duration > 0 && d.duration < 36000));
     }
 
     // Seuls status, song, voice et createdAt (heure du serveur) peuvent changer.

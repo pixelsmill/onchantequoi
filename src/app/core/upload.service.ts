@@ -2,9 +2,10 @@ import { inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { ChoraleStore } from './chorale.store';
 import { ToastService } from './toast.service';
+import { audioDuration } from './audio-duration';
 import { guessType, isAudioFile, MAX_SIZE, plural, sha256 } from './utils';
 
-/** Cache où le service worker range les audios partagés depuis WhatsApp (Android) */
+/** Cache où le service worker range les audios partagés depuis une autre app (Android) */
 export const SHARED_CACHE = 'shared';
 
 /** Issue de l'envoi d'un fichier ; seul « failed » mérite un nouvel essai */
@@ -48,12 +49,14 @@ export class UploadService {
           continue;
         }
         try {
-          const hash = await sha256(f);
+          const bytes = await f.arrayBuffer();
+          const hash = await sha256(bytes);
           if (await this.store.exists(hash)) {
             outcomes[i] = 'dup';
             continue;
           }
-          await this.store.upload(f, f.name || 'audio', hash, guessType(f), (p) => {
+          const meta = { name: f.name || 'audio', hash, type: guessType(f), duration: audioDuration(bytes) };
+          await this.store.upload(f, meta, (p) => {
             if (p > 0 && p < 1) this.toast.show(`Envoi${step}… ${Math.round(p * 100)} %`, PROGRESS_MS);
           });
           outcomes[i] = 'added';
@@ -79,7 +82,7 @@ export class UploadService {
     return outcomes;
   }
 
-  /** Récupère les audios partagés depuis WhatsApp (rangés par le service worker) */
+  /** Récupère les audios partagés depuis une autre app (rangés par le service worker) */
   async takeShared(): Promise<void> {
     if (typeof caches === 'undefined') return;
     const cache = await caches.open(SHARED_CACHE);
