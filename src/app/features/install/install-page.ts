@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { TablerIconComponent } from '@tabler/icons-angular';
 import { choirName, shortcutUrl } from '../../config';
 import { ChoraleStore } from '../../core/chorale.store';
+import { FIRST_CHOIR } from '../../core/models';
 import { Platform, PwaService } from '../../core/pwa.service';
 import { ToastService } from '../../core/toast.service';
 
@@ -25,7 +26,9 @@ export class InstallPage {
   /** Lien d'invitation de la chorale (avec la clé de ce téléphone) */
   protected readonly choirLink = computed(() => {
     const k = this.store.key();
-    return k ? `${this.origin}/?cle=${k}` : '';
+    const c = this.store.choir();
+    // La chorale 1 garde ses liens d'avant (sans « c= »)
+    return k ? `${this.origin}/?cle=${k}${c === FIRST_CHOIR ? '' : `&c=${c}`}` : '';
   });
 
   /** Adresse d'envoi utilisée par le raccourci iPhone */
