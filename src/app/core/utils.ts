@@ -84,7 +84,30 @@ export function keyFromText(text: string): string {
   } catch {
     // pas une URL : on garde le texte
   }
-  return t.replace(/^.*cle=/, '').replace(/[^A-Za-z0-9_-]/g, '');
+  const m = /cle=([A-Za-z0-9_-]+)/.exec(t);
+  return m ? m[1] : t.replace(/[^A-Za-z0-9_-]/g, '');
+}
+
+/** « de Seb », « d’Anne » */
+export function ofName(name: string): string {
+  return /^[aeiouyàâäéèêëîïôöûüù]/i.test(name) ? `d’${name}` : `de ${name}`;
+}
+
+/** Identifiant de chorale valide (« 1 », « 2 »…), comme dans firestore.rules */
+export function isChoirId(c: string | null | undefined): c is string {
+  return !!c && /^[0-9a-z-]{1,20}$/.test(c);
+}
+
+/** Chorale d'un lien « …?cle=XXXX&c=2 » ; null si le lien n'en indique pas */
+export function choirFromText(text: string): string | null {
+  const t = (text ?? '').trim();
+  let c: string | null = null;
+  try {
+    c = new URL(t).searchParams.get('c');
+  } catch {
+    c = /[?&]c=([0-9a-z-]+)/.exec(t)?.[1] ?? null;
+  }
+  return isChoirId(c) ? c : null;
 }
 
 /** Par ordre alphabétique : « Siyahamba – début » et « Siyahamba – fin » se suivent */

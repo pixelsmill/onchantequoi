@@ -1,9 +1,24 @@
 import { computed, Injectable, signal } from '@angular/core';
-import { choirName, demoOnly, firebaseConfig } from '../config';
-import { Backend, ClassifyRequest, ClassifyResult, InboxFile, Song, UploadMeta, VoiceKey } from './models';
-import { keyFromText, sortSongs } from './utils';
+import { choirName, demoOnly, firebaseConfig, teacherName } from '../config';
+import {
+  Backend,
+  ChoirMeta,
+  ClassifyRequest,
+  ClassifyResult,
+  FIRST_CHOIR,
+  InboxFile,
+  Song,
+  UploadMeta,
+  VoiceKey,
+} from './models';
+import { choirFromText, isChoirId, keyFromText, sortSongs } from './utils';
 
+/** Ancienne clé unique (avant plusieurs chorales) : reprise comme clé de la chorale 1 */
 export const KEY_STORE = 'chorale-cle';
+/** Chorales de ce téléphone : { "1": { key, name }, "2": … } */
+export const CHOIRS_STORE = 'chorale-cles';
+/** Chorale ouverte en dernier */
+export const ACTIVE_STORE = 'chorale-active';
 const EMU_STORE = 'chorale-emu';
 const DEMO_STORE = 'chorale-demo';
 
@@ -22,6 +37,18 @@ const EMULATOR_CONFIG = {
 };
 
 export type Status = 'loading' | 'gate' | 'ready' | 'error';
+
+/** Une chorale retenue sur ce téléphone */
+export interface SavedChoir {
+  key: string;
+  /** Nom affiché (lu dans choirs/{id} à la dernière ouverture) */
+  name?: string;
+}
+
+export interface ChoirEntry {
+  id: string;
+  name: string;
+}
 
 function readStore(k: string): string | null {
   try {
@@ -55,15 +82,55 @@ function writeStore(k: string, v: string): void {
   }
 }
 
-/** État partagé de l'app : accès, morceaux et audios à classer */
+/** Chorales retenues ; l'ancienne clé unique devient celle de la chorale 1 */
+export function readSavedChoirs(): Record<string, SavedChoir> {
+  const out: Record<string, SavedChoir> = {};
+  try {
+    const v: unknown = JSON.parse(readStore(CHOIRS_STORE) ?? '{}');
+    if (v && typeof v === 'object') {
+      for (const [id, c] of Object.entries(v as Record<string, unknown>)) {
+        const key = (c as SavedChoir | null)?.key;
+        if (isChoirId(id) && typeof key === 'string' && key) {
+          const name = (c as SavedChoir).name;
+          out[id] = typeof name === 'string' && name ? { key, name } : { key };
+        }
+      }
+    }
+  } catch {
+    // illisible : on repart de l'ancienne clé
+  }
+  const legacy = readStore(KEY_STORE);
+  if (legacy && !out[FIRST_CHOIR]) out[FIRST_CHOIR] = { key: legacy };
+  return out;
+}
+
+/** Nom affiché d'une chorale dont on ne connaît pas encore le nom */
+export function defaultChoirName(id: string): string {
+  return id === FIRST_CHOIR ? choirName : `Chorale ${id}`;
+}
+
+/** État partagé de l'app : accès, chorale active, morceaux et audios à classer */
 @Injectable({ providedIn: 'root' })
 export class ChoraleStore {
-  readonly choirName = choirName;
   readonly status = signal<Status>('loading');
   readonly gateMessage = signal('');
   readonly demo = signal(false);
-  /** Clé de la chorale retenue sur ce téléphone */
+  /** Chorale active (« 1 », « 2 »…) */
+  readonly choir = signal(FIRST_CHOIR);
+  /** Clé de la chorale active */
   readonly key = signal<string | null>(null);
+  readonly choirName = signal(choirName);
+  /** Chef de chœur de la chorale active */
+  readonly teacher = signal(teacherName);
+  private readonly saved = signal<Record<string, SavedChoir>>({});
+  /** Chorales de ce téléphone, dans l'ordre de leur numéro */
+  readonly choirs = computed((): ChoirEntry[] =>
+    Object.entries(this.saved())
+      .map(([id, c]) => ({ id, name: c.name || defaultChoirName(id) }))
+      .sort((a, b) => a.id.localeCompare(b.id, 'fr', { numeric: true })),
+  );
+  /** Les autres chorales de ce téléphone (pour en changer) */
+  readonly otherChoirs = computed(() => this.choirs().filter((c) => c.id !== this.choir()));
   readonly songs = signal<Song[]>([]);
   readonly songsLoaded = signal(false);
   readonly inbox = signal<InboxFile[]>([]);
@@ -97,10 +164,16 @@ export class ChoraleStore {
         readSession(DEMO_STORE) === '1');
     try {
       if (demo) {
-        const { createDemoBackend } = await import('./demo-backend');
+        const { createDemoBackend, DEMO_CHOIRS } = await import('./demo-backend');
         this.backend = createDemoBackend();
         this.demo.set(true);
-        this.start();
+        // Démo : le téléphone est dans les deux chorales fictives (rien n'est retenu)
+        this.saved.set(
+          Object.fromEntries(
+            Object.entries(DEMO_CHOIRS).map(([id, m]) => [id, { key: 'demo', name: m.name }]),
+          ),
+        );
+        await this.open(isChoirId(params.get('c')) ? params.get('c')! : FIRST_CHOIR, 'demo', false);
         return;
       }
       const { createFirebaseBackend } = await import('./firebase-backend');
@@ -112,36 +185,83 @@ export class ChoraleStore {
       this.status.set('error');
       return;
     }
-    const k = keyFromText(params.get('cle') ?? '') || readStore(KEY_STORE);
+    this.saved.set(readSavedChoirs());
+    // Lien ouvert : sa chorale (1 si le lien n'en indique pas) ; sinon la dernière ouverte
+    const linkKey = keyFromText(params.get('cle') ?? '');
+    const linkChoir = isChoirId(params.get('c')) ? params.get('c')! : FIRST_CHOIR;
+    const last = readStore(ACTIVE_STORE);
+    const c = linkKey
+      ? linkChoir
+      : last && this.saved()[last]
+        ? last
+        : (this.choirs()[0]?.id ?? FIRST_CHOIR);
+    const k = linkKey || this.saved()[c]?.key;
+    this.choir.set(c);
     if (!k) {
       this.status.set('gate');
       return;
     }
-    await this.tryKey(k, false);
+    await this.open(c, k, false);
   }
 
   /** Lien ou clé saisi(e) sur l'écran d'accueil */
   async submitKey(text: string): Promise<boolean> {
     const k = keyFromText(text);
-    return k ? this.tryKey(k, true) : false;
+    return k ? this.open(choirFromText(text) ?? FIRST_CHOIR, k, true) : false;
   }
 
-  private async tryKey(k: string, typed: boolean): Promise<boolean> {
-    const result = await this.api.join(k);
+  /** Passe à une autre chorale de ce téléphone */
+  async switchChoir(id: string): Promise<void> {
+    const c = this.saved()[id];
+    if (!c || id === this.choir()) return;
+    await this.open(id, c.key, false);
+  }
+
+  /** Ouvre une chorale avec sa clé : écouteurs, nom et chef */
+  private async open(c: string, k: string, typed: boolean): Promise<boolean> {
+    this.stop();
+    this.choir.set(c);
+    this.choirName.set(this.saved()[c]?.name || defaultChoirName(c));
+    this.songs.set([]);
+    this.inbox.set([]);
+    this.songsLoaded.set(false);
+    this.inboxLoaded.set(false);
+    this.status.set('loading');
+    const result = await this.api.join(k, c);
     if (result === 'ok') {
-      writeStore(KEY_STORE, k);
       this.key.set(k);
+      this.remember(c, { key: k });
       this.start();
+      this.applyMeta(c, await this.api.choirMeta());
       return true;
     }
     if (result === 'network' && !typed) {
-      // Au démarrage : écran « Connexion impossible » avec « Réessayer » (la clé est gardée)
+      // Au démarrage : écran « Connexion impossible » avec « Réessayer » (la clé est gardée)
       this.status.set('error');
       return false;
     }
     this.gateMessage.set(result === 'network' ? NETWORK : INVALID);
     this.status.set('gate');
     return false;
+  }
+
+  private applyMeta(c: string, meta: ChoirMeta | null): void {
+    if (this.choir() !== c) return; // autre chorale ouverte entre-temps
+    const name = meta?.name || this.saved()[c]?.name || defaultChoirName(c);
+    this.choirName.set(name);
+    this.teacher.set(meta?.teacher || teacherName);
+    this.remember(c, { name });
+  }
+
+  private remember(c: string, patch: Partial<SavedChoir>): void {
+    const prev = this.saved()[c];
+    const next = { ...prev, ...patch } as SavedChoir;
+    this.saved.update((s) => ({ ...s, [c]: next }));
+    if (this.demo()) return;
+    writeStore(CHOIRS_STORE, JSON.stringify(this.saved()));
+    writeStore(ACTIVE_STORE, c);
+    // Compatibilité : une version plus ancienne de l'app relit la clé de la chorale 1 ici
+    if (c === FIRST_CHOIR && next.key) writeStore(KEY_STORE, next.key);
   }
 
   private start(): void {

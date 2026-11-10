@@ -1,5 +1,4 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { choirName } from '../config';
 import { ChoraleStore } from './chorale.store';
 import { Song, VOICE_NAME, VoiceKey } from './models';
 import { ToastService } from './toast.service';
@@ -315,8 +314,8 @@ export class PlayerService {
     if (!ms || typeof MediaMetadata === 'undefined') return;
     ms.metadata = new MediaMetadata({
       title: t.title,
-      artist: t.voice ? VOICE_NAME[t.voice] : choirName,
-      album: choirName,
+      artist: t.voice ? VOICE_NAME[t.voice] : this.store.choirName(),
+      album: this.store.choirName(),
       artwork: [{ src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' }],
     });
   }

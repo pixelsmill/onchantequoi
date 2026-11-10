@@ -2,6 +2,8 @@ import { ChangeDetectionStrategy, Component, effect, inject, untracked } from '@
 import { IsActiveMatchOptions, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { TablerIconComponent } from '@tabler/icons-angular';
 import { ChoraleStore } from './core/chorale.store';
+import { DialogService } from './core/dialog.service';
+import { LyricsService } from './core/lyrics.service';
 import { PlayerService } from './core/player.service';
 import { PwaService } from './core/pwa.service';
 import { ToastService } from './core/toast.service';
@@ -38,6 +40,8 @@ export class App {
   protected readonly player = inject(PlayerService);
   protected readonly pwa = inject(PwaService);
   protected readonly uploads = inject(UploadService);
+  private readonly dialog = inject(DialogService);
+  private readonly lyrics = inject(LyricsService);
   protected readonly accept = ACCEPT;
   /** « Morceaux » reste actif avec ?cle=… ou ?demo dans l'adresse */
   protected readonly exactPath: IsActiveMatchOptions = {
@@ -58,6 +62,22 @@ export class App {
         untracked(() => this.uploads.takeShared().catch((e) => console.warn(e)));
       }
     });
+  }
+
+  /** Menu de l'en-tête : passer à une autre chorale de ce téléphone */
+  protected async changeChoir(): Promise<void> {
+    const others = this.store.otherChoirs();
+    const id = await this.dialog.menu(
+      'Changer de chorale',
+      others.map((c) => ({ id: c.id, label: c.name })),
+      `Vous êtes dans « ${this.store.choirName()} ». Pour en ajouter une, ouvrez son lien.`,
+    );
+    if (!id) return;
+    this.player.stop();
+    this.lyrics.close();
+    await this.store.switchChoir(id);
+    // L'en-tête a été redessiné : le focus revient sur le nom de la chorale
+    setTimeout(() => document.querySelector<HTMLElement>('.choir-btn')?.focus());
   }
 
   protected onFiles(input: HTMLInputElement): void {

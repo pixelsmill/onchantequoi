@@ -6,6 +6,8 @@ import {
   guessType,
   isAudioFile,
   isFresh,
+  choirFromText,
+  ofName,
   keyFromText,
   norm,
   plural,
@@ -50,6 +52,20 @@ describe('utils', () => {
     expect(isAudioFile({ type: 'image/jpeg', name: 'photo.jpg' })).toBe(false);
     expect(isAudioFile({ type: 'application/pdf', name: 'partition.pdf' })).toBe(false);
     expect(isAudioFile({ type: '', name: 'notes.txt' })).toBe(false);
+  });
+
+  it('ofName() élide devant une voyelle', () => {
+    expect(ofName('Seb')).toBe('de Seb');
+    expect(ofName('Anne')).toBe('d’Anne');
+    expect(ofName('Émile')).toBe('d’Émile');
+  });
+
+  it('choirFromText() lit la chorale d’un lien, null sans « c= »', () => {
+    expect(choirFromText('https://x.web.app/?cle=Abcdefghij12&c=2')).toBe('2');
+    expect(choirFromText('Le lien : x.web.app/?cle=Abcdefghij12&c=3')).toBe('3');
+    expect(choirFromText('https://x.web.app/?cle=Abcdefghij12')).toBeNull();
+    expect(choirFromText('https://x.web.app/?cle=Abcdefghij12&c=../x')).toBeNull();
+    expect(keyFromText('Le lien : x.web.app/?cle=Abc_123-x&c=2')).toBe('Abc_123-x');
   });
 
   it('keyFromText() lit la clé dans un lien ou telle quelle', () => {

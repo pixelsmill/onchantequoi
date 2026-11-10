@@ -32,7 +32,7 @@ import {
   ref,
   uploadBytesResumable,
 } from 'firebase/storage';
-import { Backend, ClassifyResult, InboxFile, JoinResult, Recording, Song } from './models';
+import { Backend, ChoirMeta, ClassifyResult, FIRST_CHOIR, InboxFile, JoinResult, Recording, Song } from './models';
 
 /** Enregistrements (empreintes) d'un morceau, triés, pour comparer */
 const hashesOf = (voices: Record<string, Recording> | undefined): string[] =>
@@ -117,29 +117,41 @@ export async function createFirebaseBackend(
     connectStorageEmulator(storage, '127.0.0.1', 9199);
   }
   const urls = new Map<string, Promise<string>>();
+  // Chorale active : choirs/{choir}/songs, choirs/{choir}/files, audio/{choir}/{sha256}
+  let choir = FIRST_CHOIR;
+  const songsCol = () => collection(db, 'choirs', choir, 'songs');
+  const songDoc = (id: string) => doc(db, 'choirs', choir, 'songs', id);
 
   async function currentUser(): Promise<User> {
     await auth.authStateReady();
     return auth.currentUser ?? (await signInAnonymously(auth)).user;
   }
 
-  const audioRef = (hash: string) => ref(storage, `audio/${hash}`);
-  const fileDoc = (hash: string) => doc(db, 'files', hash);
+  const audioRef = (hash: string) => ref(storage, `audio/${choir}/${hash}`);
+  const fileDoc = (hash: string) => doc(db, 'choirs', choir, 'files', hash);
 
   return {
     demo: false,
 
-    async join(key): Promise<JoinResult> {
+    async join(key, c): Promise<JoinResult> {
+      choir = c;
       try {
         const user = await withTimeout(currentUser(), 20_000);
         const member = doc(db, 'members', user.uid);
         const snap = await getDoc(member);
-        if (snap.exists() && snap.data()['key'] === key) {
+        const d = snap.exists() ? snap.data() : {};
+        // Ancienne fiche { key, at } : elle vaut pour la chorale 1
+        const known = d['keys']?.[c] ?? (c === FIRST_CHOIR ? d['key'] : undefined);
+        if (known === key) {
           // La clé a pu être supprimée depuis : lecture test
-          await getDocs(query(collection(db, 'songs'), limit(1)));
+          await getDocs(query(songsCol(), limit(1)));
           return 'ok';
         }
-        await withTimeout(setDoc(member, { key, at: serverTimestamp() }), 20_000);
+        // Une clé par chorale, fusionnée dans la fiche (les autres chorales sont gardées)
+        await withTimeout(
+          setDoc(member, { keys: { [c]: key }, last: c, at: serverTimestamp() }, { merge: true }),
+          20_000,
+        );
         return 'ok';
       } catch (e) {
         console.warn('join', e);
@@ -148,10 +160,22 @@ export async function createFirebaseBackend(
       }
     },
 
+    async choirMeta(): Promise<ChoirMeta | null> {
+      try {
+        const snap = await getDoc(doc(db, 'choirs', choir));
+        if (!snap.exists()) return null;
+        const d = snap.data();
+        return { name: String(d['name'] ?? ''), teacher: String(d['teacher'] ?? '') };
+      } catch (e) {
+        console.warn('choirMeta', e);
+        return null;
+      }
+    },
+
     onSongs(cb, onError) {
       const emit = serverFirst(cb);
       return onSnapshot(
-        collection(db, 'songs'),
+        songsCol(),
         { includeMetadataChanges: true },
         (qs) =>
           emit(
@@ -163,7 +187,7 @@ export async function createFirebaseBackend(
     },
 
     onInbox(cb, onError) {
-      const q = query(collection(db, 'files'), where('status', '==', 'inbox'));
+      const q = query(collection(db, 'choirs', choir, 'files'), where('status', '==', 'inbox'));
       const emit = serverFirst(cb);
       return onSnapshot(
         q,
@@ -229,12 +253,12 @@ export async function createFirebaseBackend(
           let songRef: DocumentReference;
           let song: DocumentData;
           if (songId) {
-            songRef = doc(db, 'songs', songId);
+            songRef = songDoc(songId);
             const s = await tx.get(songRef);
             if (!s.exists()) throw new Error('morceau introuvable');
             song = s.data();
           } else {
-            songRef = doc(collection(db, 'songs'));
+            songRef = doc(songsCol());
             song = { title: (newTitle ?? '').trim(), voices: {}, createdAt: Date.now() };
           }
           id = songRef.id;
@@ -258,7 +282,7 @@ export async function createFirebaseBackend(
 
     unclassify(songId, voice, hash) {
       return runTransaction(db, async (tx) => {
-        const songRef = doc(db, 'songs', songId);
+        const songRef = songDoc(songId);
         const s = await tx.get(songRef);
         if (!s.exists()) return false;
         const song = s.data();
@@ -290,19 +314,19 @@ export async function createFirebaseBackend(
     },
 
     async renameSong(songId, title) {
-      await updateDoc(doc(db, 'songs', songId), { title: title.trim() });
+      await updateDoc(songDoc(songId), { title: title.trim() });
     },
 
     async setLyrics(songId, lyrics) {
       const text = lyrics.trim();
-      await updateDoc(doc(db, 'songs', songId), { lyrics: text || deleteField() });
+      await updateDoc(songDoc(songId), { lyrics: text || deleteField() });
     },
 
     async deleteSong(songId, hashes) {
       // Seulement s'il contient toujours exactement les enregistrements annoncés
       const expected = [...hashes].sort();
       const removed = await runTransaction(db, async (tx) => {
-        const ref = doc(db, 'songs', songId);
+        const ref = songDoc(songId);
         const snap = await tx.get(ref);
         if (!snap.exists()) return [];
         const current = hashesOf(snap.data()['voices']);
@@ -317,12 +341,13 @@ export async function createFirebaseBackend(
     },
 
     url(hash, refresh = false) {
-      if (refresh) urls.delete(hash);
-      let u = urls.get(hash);
+      const k = `${choir}/${hash}`;
+      if (refresh) urls.delete(k);
+      let u = urls.get(k);
       if (!u) {
         u = getDownloadURL(audioRef(hash));
-        u.catch(() => urls.delete(hash));
-        urls.set(hash, u);
+        u.catch(() => urls.delete(k));
+        urls.set(k, u);
       }
       return u;
     },

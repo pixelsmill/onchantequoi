@@ -37,6 +37,16 @@ import { keyFromText } from '../../core/utils';
           </button>
         }
       </form>
+      @if (store.otherChoirs().length) {
+        <p class="others" id="gate-others">Ou ouvrez une autre de vos chorales :</p>
+        <div class="choirs" role="group" aria-labelledby="gate-others">
+          @for (c of store.otherChoirs(); track c.id) {
+            <button type="button" class="secondary" [disabled]="busy()" (click)="open(c.id)">
+              {{ c.name }}
+            </button>
+          }
+        </div>
+      }
     </div>
   `,
   styles: `
@@ -53,9 +63,13 @@ import { keyFromText } from '../../core/utils';
       color: var(--muted);
       margin: 0 0 16px;
     }
-    form {
+    form,
+    .choirs {
       display: grid;
       gap: 10px;
+    }
+    .others {
+      margin: 20px 0 10px;
     }
   `,
 })
@@ -70,6 +84,15 @@ export class Gate {
     this.busy.set(true);
     try {
       await this.store.submitKey(this.text());
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  protected async open(id: string): Promise<void> {
+    this.busy.set(true);
+    try {
+      await this.store.switchChoir(id);
     } finally {
       this.busy.set(false);
     }

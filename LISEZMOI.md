@@ -77,6 +77,33 @@ https://<id-du-projet>.web.app/?cle=VMgkUrmfd6r0nNB4RdSrow
 
 **Changer le lien** (s'il a fuité) : créez un nouveau document dans `keys`, supprimez l'ancien, et postez le nouveau lien. Les anciens accès sont coupés immédiatement (l'app redemande le lien). Pensez aussi à mettre à jour le raccourci iPhone.
 
+### Plusieurs chorales
+
+Une seule app, une clé par chorale. Chaque chorale a ses morceaux, ses audios et son « À classer » ; un choriste ne voit que les chorales dont il a ouvert le lien. Un même téléphone peut être dans plusieurs chorales : son nom devient alors un menu, en haut de l'app, pour passer de l'une à l'autre. Les chorales sont numérotées : la chorale d'origine est la `1`.
+
+**Créer une chorale** (5 minutes, dans la console Firebase) :
+
+1. **Firestore** › collection `choirs` › *Ajouter un document* : ID = le numéro suivant (`2`), champs `name` (texte, le nom affiché, par exemple « Chorale du jeudi ») et `teacher` (texte, le prénom du chef de chœur : « Voix annoncée par … »).
+2. **Firestore** › collection `keys` › *Ajouter un document* : ID = une clé secrète (même format que ci-dessus), champs `note` (texte) et `choir` (texte) = `2`.
+3. Le lien à poster dans le groupe de cette chorale : `https://onchantequoi.web.app/?cle=<la clé>&c=2`.
+
+Une clé sans champ `choir` ouvre la chorale `1`, et un lien sans `&c=` aussi : les liens d'avant restent valables. Le raccourci iPhone n'a pas besoin de `c` : la fonction `depot` trouve la chorale à partir de la clé.
+
+### Passage à plusieurs chorales (une seule fois, données d'origine)
+
+Les données de la chorale d'origine sont recopiées de `songs`, `files` et `audio/{sha256}` vers `choirs/1/songs`, `choirs/1/files` et `audio/1/{sha256}`. Dans l'ordre :
+
+1. **Règles de transition** : `npx firebase deploy --only firestore,storage` (dans un terminal interactif : répondre **Y** à la question sur le rôle IAM, voir l'étape 8 de la mise en ligne). Elles acceptent les anciens et les nouveaux emplacements : les téléphones qui ont encore l'ancienne version continuent de marcher.
+2. **Copie** : créez une clé de compte de service (*Paramètres du projet* › *Comptes de service* › *Générer une nouvelle clé privée*, fichier à garder hors du dossier du projet), puis :
+   ```powershell
+   $env:GOOGLE_APPLICATION_CREDENTIALS = "C:\chemin\vers\la-cle.json"
+   node scripts/migrer-multi-chorales.mjs --production
+   ```
+   Le script ne supprime rien et n'écrase rien ; il affiche à la fin les éventuels écarts. Sans `--production`, il travaille sur les émulateurs (c'est ainsi qu'il est testé : `npm run test:migration`).
+3. **Nouvelle version** : `npm run deploy` (app et fonction `depot`). Les téléphones affichent le bandeau « nouvelle version ».
+4. **Relancer la copie** (même commande) : elle reprend ce qu'une ancienne version aurait encore déposé entre-temps.
+5. **Plus tard** (une ou deux semaines) : retirer des règles les blocs marqués « Transition », puis supprimer les anciennes données dans la console.
+
 ---
 
 ## 4. Installer l'app sur les téléphones
@@ -139,11 +166,12 @@ La fonction traite 3 envois à la fois ; au-delà, elle demande de réessayer (e
 | `npm test` | l'app : utilitaires, mode démo, brouillons de classement, affichage (Vitest) |
 | `npm run test:functions` | la logique pure de la fonction `depot` : lecture du corps et détection du format |
 | `npm run test:rules` | les règles Firestore et Storage dans l'émulateur : non-membre refusé, clé supprimée donc accès coupé, `keys` illisible, etc. |
-| `npm run test:depot` | la fonction `depot` de bout en bout dans les émulateurs : dépôt, doublon, clé invalide, fichier refusé, multipart |
+| `npm run test:depot` | la fonction `depot` de bout en bout dans les émulateurs : dépôt, doublon, clé invalide, fichier refusé, multipart, chorale de la clé |
+| `npm run test:migration` | la copie vers la chorale 1 dans les émulateurs : tout copié, rien écrasé, relançable |
 
-Résultats au 10 novembre 2026 : 42 tests pour l'app et 36 pour les règles (vérifiés aussi contre des règles volontairement affaiblies). Au 29 septembre : 17 pour la fonction et 12 de bout en bout.
+Résultats au 10 novembre 2026 : 47 tests pour l’app, 17 pour la fonction, 81 pour les règles (dont l'isolation entre chorales ; 1 ignoré, propre à l'ancien format), 13 de bout en bout et 2 pour la migration.
 
-Les deux dernières commandes lancent les émulateurs Firebase. Elles demandent `firebase-tools` et **Java 21 ou plus** : le Java par défaut de ce PC est un Java 8, trop ancien. Celui d'Android Studio convient :
+Les commandes `test:rules`, `test:depot` et `test:migration` lancent les émulateurs Firebase. Elles demandent `firebase-tools` et **Java 21 ou plus** : le Java par défaut de ce PC est un Java 8, trop ancien. Celui d'Android Studio convient :
 
 ```powershell
 # PowerShell
@@ -166,9 +194,11 @@ Pour essayer la vraie version (Auth, Firestore, Storage, fonction) sans toucher 
 
 ```bash
 npm run emulators         # terminal 1 (avec JAVA_HOME réglé, voir ci-dessus) ; console : http://localhost:4000
-npm run emulators:seed    # terminal 2 : crée la clé « cle-de-test-chorale »
+npm run emulators:seed    # terminal 2 : crée les chorales 1 et 2 et leurs clés, affiche les liens
 npm start                 # puis ouvrir http://localhost:4200/?emu&cle=cle-de-test-chorale
 ```
+
+Ouvrir ensuite le lien de la chorale 2 (`…&c=2`) met le même navigateur dans les deux chorales. En mode démo (`?demo`), le téléphone est d'office dans deux chorales fictives.
 
 Le paramètre `?emu` (seulement sur `localhost`) branche l'app sur les émulateurs, avec le projet fictif `demo-chorale`.
 
@@ -204,7 +234,7 @@ Le paramètre `?emu` (seulement sur `localhost`) branche l'app sur les émulateu
 - **Sécurité** : règles Firestore et Storage testées dans l'émulateur. L'en-tête `Referrer-Policy: strict-origin-when-cross-origin` garantit que le lien complet (qui contient la clé) n'est jamais transmis aux autres sites.
 
 - **Vieux iPhone** : Angular 21 vise par défaut iOS 16.4 et plus. En dessous, le code de l'app n'est pas compris et l'écran reste blanc. `.browserslistrc` ajoute **iOS 15** aux navigateurs visés (Angular prévient au build que ce n'est pas officiellement pris en charge), et `src/polyfills.ts` ajoute les deux fonctions qui manquent à iOS 15.0 à 15.3. En dessous d'iOS 15, `index.html` affiche « iPhone trop ancien » avec la version d'iOS du téléphone, au lieu d'un écran blanc.
-- Plusieurs chorales dans la même app : étude dans [docs/etude-multi-chorales.md](docs/etude-multi-chorales.md).
+- **Plusieurs chorales** : sous-collections `choirs/{chorale}/songs` et `choirs/{chorale}/files`, audios dans `audio/{chorale}/`, clé = chorale (`keys/{clé}.choir`), fiche du téléphone `members/{uid}.keys.{chorale}`. Choix et alternatives : [docs/etude-multi-chorales.md](docs/etude-multi-chorales.md) ; mise en place : section 3.
 
 ### À vérifier au premier essai
 

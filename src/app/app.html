@@ -5,7 +5,22 @@
 
 <header class="top">
   <div class="top-row">
-    <h1>{{ store.choirName }}</h1>
+    @if (store.status() === 'ready' && store.otherChoirs().length) {
+      <h1>
+        <button
+          type="button"
+          class="choir-btn"
+          aria-haspopup="dialog"
+          [attr.aria-label]="store.choirName() + ', changer de chorale'"
+          (click)="changeChoir()"
+        >
+          {{ store.choirName() }}
+          <tabler-icon icon="chevron-down" [size]="20" />
+        </button>
+      </h1>
+    } @else {
+      <h1>{{ store.choirName() }}</h1>
+    }
     @if (store.status() === 'ready') {
       <a
         class="icon-btn"

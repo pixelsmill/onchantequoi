@@ -4,6 +4,7 @@ const Busboy = require('busboy');
 
 const MAX = 30 * 1024 * 1024; // limite des fonctions HTTP : 32 Mo
 const KEY_FORMAT = /^[A-Za-z0-9_-]{10,128}$/; // clé d'accès = id d'un document keys/… (mêmes règles côté Firestore)
+const CHOIR_FORMAT = /^[0-9a-z-]{1,20}$/; // chorale (« 1 », « 2 »…), comme dans firestore.rules
 
 // Reconnaît le format à partir des premiers octets (le nom/type envoyé n'est pas fiable)
 function detectType(buf, fallback = '') {
@@ -162,4 +163,4 @@ function audioDuration(buf) {
   return d != null && Number.isFinite(d) && d > 0 && d < 36000 ? Math.round(d * 10) / 10 : undefined;
 }
 
-module.exports = { detectType, sha256, cleanName, decodeName, readFiles, audioDuration, MAX, KEY_FORMAT };
+module.exports = { detectType, sha256, cleanName, decodeName, readFiles, audioDuration, MAX, KEY_FORMAT, CHOIR_FORMAT };

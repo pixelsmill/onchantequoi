@@ -8,7 +8,7 @@ const logger = require('firebase-functions/logger');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getStorage } = require('firebase-admin/storage');
-const { detectType, sha256, readFiles, audioDuration, MAX, KEY_FORMAT } = require('./lib');
+const { detectType, sha256, readFiles, audioDuration, MAX, KEY_FORMAT, CHOIR_FORMAT } = require('./lib');
 
 initializeApp();
 const db = getFirestore();
@@ -25,9 +25,11 @@ exports.depot = onRequest(
 
     try {
       const cle = String(req.query.cle || req.headers['x-cle'] || '');
-      if (!KEY_FORMAT.test(cle) || !(await db.doc(`keys/${cle}`).get()).exists) {
-        return res.status(403).send('Lien de la chorale invalide');
-      }
+      const keyDoc = KEY_FORMAT.test(cle) ? await db.doc(`keys/${cle}`).get() : null;
+      if (!keyDoc?.exists) return res.status(403).send('Lien de la chorale invalide');
+      // Chorale ouverte par la clé (« 1 » pour les clés d'avant plusieurs chorales)
+      const choir = keyDoc.get('choir') ?? '1';
+      if (!CHOIR_FORMAT.test(choir)) return res.status(403).send('Lien de la chorale invalide');
 
       let files;
       try { files = await readFiles(req); } catch { return res.status(400).send('Envoi illisible'); }
@@ -38,10 +40,10 @@ exports.depot = onRequest(
         const type = detectType(f.data, f.type);
         if (!type || f.tooBig || f.data.length > MAX) { refuses++; continue; }
         const hash = sha256(f.data);
-        const ref = db.doc(`files/${hash}`);
+        const ref = db.doc(`choirs/${choir}/files/${hash}`);
         if ((await ref.get()).exists) { doublons++; continue; }
         // Jeton de téléchargement, comme pour un envoi depuis l'app (getDownloadURL côté client)
-        await bucket().file(`audio/${hash}`).save(f.data, {
+        await bucket().file(`audio/${choir}/${hash}`).save(f.data, {
           resumable: false, contentType: type,
           metadata: { metadata: { firebaseStorageDownloadTokens: crypto.randomUUID() } },
         });

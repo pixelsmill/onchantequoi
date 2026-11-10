@@ -36,8 +36,8 @@ async function send(body, opts) {
   const res = await depot(body, opts);
   return { status: res.status, type: res.headers.get('content-type'), text: await res.text() };
 }
-const fileDoc = async (h) => (await db.doc(`files/${h}`).get()).data();
-const stored = async (h) => (await bucket.file(`audio/${h}`).exists())[0];
+const fileDoc = async (h) => (await db.doc(`choirs/1/files/${h}`).get()).data();
+const stored = async (h) => (await bucket.file(`audio/1/${h}`).exists())[0];
 
 // Jeton d'un téléphone connecté (non signé : accepté par les émulateurs, comme dans rules-unit-testing)
 function phoneToken(uid) {
@@ -86,7 +86,7 @@ test('dépôt brut (raccourci iPhone) → 200 ; files/{sha256} dans « À classe
   assert.deepEqual(f, { status: 'inbox', name: 'WhatsApp Audio 2026-09-23 at 22.34.43.mp4', size: data.length, type: 'audio/mp4', source: 'depot' });
   assert.ok(createdAt instanceof Timestamp);
 
-  const file = bucket.file(`audio/${h}`);
+  const file = bucket.file(`audio/1/${h}`);
   const [md] = await file.getMetadata();
   assert.equal(md.contentType, 'audio/mp4');
   assert.equal(Number(md.size), data.length);
@@ -119,7 +119,7 @@ test('le client web peut lire l\'audio déposé (règles Storage + lien avec jet
   const data = m4a();
   const h = sha256(data);
   await send(data);
-  const meta = `${STORAGE}/v0/b/${BUCKET}/o/${encodeURIComponent(`audio/${h}`)}`;
+  const meta = `${STORAGE}/v0/b/${BUCKET}/o/${encodeURIComponent(`audio/1/${h}`)}`;
   const refus = await fetch(meta, { headers: { Authorization: `Firebase ${phoneToken('inconnu')}` } });
   assert.equal(refus.status, 403); // téléphone qui n'a pas rejoint
   const res = await fetch(meta, { headers: { Authorization: `Firebase ${phoneToken(MEMBRE)}` } });
@@ -210,4 +210,22 @@ test('fichier de plus de 30 Mo → 415, rien d\'enregistré (avec ou sans Conten
   const r = await send(juste, { headers: { 'Content-Type': 'audio/mp4' } }); // 30 Mo tout juste : accepté
   assert.equal(r.status, 200);
   assert.equal((await fileDoc(sha256(juste))).size, MAX);
+});
+
+test('clé d’une autre chorale → audio rangé dans cette chorale seulement', async () => {
+  const cle2 = 'cle-e2e-chorale-2-0123';
+  await db.doc(`keys/${cle2}`).set({ note: 'e2e', choir: '2' });
+  const data = m4a();
+  const h = sha256(data);
+  assert.equal((await send(data, { cle: cle2 })).status, 200);
+  assert.equal((await db.doc(`choirs/2/files/${h}`).get()).data().status, 'inbox');
+  assert.equal((await bucket.file(`audio/2/${h}`).exists())[0], true);
+  assert.equal(await fileDoc(h), undefined); // rien dans la chorale 1
+  assert.equal(await stored(h), false);
+  // Même audio déposé ensuite pour la chorale 1 : gardé séparément (pas un doublon)
+  assert.match((await send(data)).text, /1 audio envoyé/);
+  assert.equal((await fileDoc(h)).status, 'inbox');
+  // Clé avec une chorale mal formée : refusée
+  await db.doc('keys/cle-e2e-chorale-x-0123').set({ note: 'e2e', choir: '../x' });
+  assert.equal((await send(m4a(), { cle: 'cle-e2e-chorale-x-0123' })).status, 403);
 });

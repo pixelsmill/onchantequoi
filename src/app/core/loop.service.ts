@@ -1,8 +1,9 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { ChoraleStore } from './chorale.store';
-import { VoiceKey } from './models';
+import { FIRST_CHOIR, VoiceKey } from './models';
 import { pickVoice, PlayerService } from './player.service';
 
+/** Sélection retenue par chorale : chorale-boucle-1, chorale-boucle-2… */
 const IDS_STORE = 'chorale-boucle';
 const VOICE_STORE = 'chorale-boucle-voix';
 const VOICE_KEYS: readonly VoiceKey[] = ['S', 'A', 'H', 'T'];
@@ -23,9 +24,11 @@ function write(k: string, v: string): void {
   }
 }
 
-function readIds(): string[] {
+function readIds(choir: string): string[] {
+  // Avant plusieurs chorales, la sélection de la chorale 1 était sous « chorale-boucle »
+  const raw = read(`${IDS_STORE}-${choir}`) ?? (choir === FIRST_CHOIR ? read(IDS_STORE) : null);
   try {
-    const v: unknown = JSON.parse(read(IDS_STORE) ?? '[]');
+    const v: unknown = JSON.parse(raw ?? '[]');
     return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
   } catch {
     return [];
@@ -37,7 +40,7 @@ function readIds(): string[] {
 export class LoopService {
   private readonly store = inject(ChoraleStore);
   private readonly player = inject(PlayerService);
-  private readonly ids = signal<string[]>(readIds());
+  private readonly ids = signal<string[]>(readIds(this.store.choir()));
   readonly voice = signal<VoiceKey>(
     VOICE_KEYS.find((v) => v === read(VOICE_STORE)) ?? 'T',
   );
@@ -52,6 +55,14 @@ export class LoopService {
   );
   /** La sélection est en cours de lecture */
   readonly active = computed(() => !!this.player.playlist());
+
+  constructor() {
+    // Autre chorale ouverte : sa propre sélection
+    effect(() => {
+      const c = this.store.choir();
+      untracked(() => this.ids.set(readIds(c)));
+    });
+  }
 
   has(id: string): boolean {
     return this.ids().includes(id);
@@ -102,6 +113,6 @@ export class LoopService {
     // On ne garde que les morceaux qui existent encore
     const known = new Set(this.store.songs().map((s) => s.id));
     const ids = this.store.songsLoaded() ? this.ids().filter((id) => known.has(id)) : this.ids();
-    write(IDS_STORE, JSON.stringify(ids));
+    write(`${IDS_STORE}-${this.store.choir()}`, JSON.stringify(ids));
   }
 }

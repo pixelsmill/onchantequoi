@@ -72,14 +72,26 @@ export type ClassifyResult =
   | { ok: true; songId: string }
   | { ok: false; reason: 'already' | 'error' };
 
+/** Chorale : choirs/{id} = { name, teacher } (id = « 1 », « 2 »…) */
+export interface ChoirMeta {
+  name: string;
+  /** Chef de chœur : c'est lui qui annonce la voix au début des enregistrements */
+  teacher: string;
+}
+
+/** Chorale actuelle, et chorale d'un lien sans « c= » */
+export const FIRST_CHOIR = '1';
+
 /** ok = accès ouvert ; denied = clé inconnue ou supprimée ; network = impossible de vérifier */
 export type JoinResult = 'ok' | 'denied' | 'network';
 
 /** Accès aux données : même interface pour Firebase et pour le mode démo */
 export interface Backend {
   readonly demo: boolean;
-  /** Rejoint la chorale avec la clé */
-  join(key: string): Promise<JoinResult>;
+  /** Rejoint la chorale avec sa clé ; elle devient la chorale active de tout ce qui suit */
+  join(key: string, choir: string): Promise<JoinResult>;
+  /** Nom et chef de la chorale active (null si la fiche n'existe pas ou n'est pas lisible) */
+  choirMeta(): Promise<ChoirMeta | null>;
   onSongs(cb: (songs: Song[]) => void, onError: (e: unknown) => void): () => void;
   onInbox(cb: (files: InboxFile[]) => void, onError: (e: unknown) => void): () => void;
   exists(hash: string): Promise<boolean>;

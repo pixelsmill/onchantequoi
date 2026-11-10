@@ -16,7 +16,8 @@
     "emulators": "firebase emulators:start --project demo-chorale",
     "deploy": "ng build && firebase deploy",
     "deploy:site": "ng build && firebase deploy --only hosting",
-    "emulators:seed": "node scripts/seed-emulator.mjs"
+    "emulators:seed": "node scripts/seed-emulator.mjs",
+    "test:migration": "firebase emulators:exec --only firestore,storage --project demo-chorale \"node --test --test-reporter=spec scripts/migrer-multi-chorales.test.mjs\""
   },
   "private": true,
   "packageManager": "npm@10.9.2",

@@ -2,28 +2,39 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // Même règle que Firestore : membre avec une clé qui existe encore.
+    // Même règle que Firestore : membre de la chorale c avec une clé qui existe encore.
     // Lire Firestore depuis ces règles demande le rôle IAM roles/firebaserules.firestoreServiceAgent
     // pour l'agent Storage : la CLI le propose au déploiement (terminal interactif, répondre Y).
     // Elle ne pose la question que si ce fichier a changé depuis le dernier déploiement.
     // (2 documents Firestore lus au plus par requête : c'est la limite des règles Storage)
-    function isMember() {
-      return request.auth != null && hasLiveKey(request.auth.uid);
+    function memberOf(c) {
+      return request.auth != null && hasLiveKey(request.auth.uid, c);
     }
-    function hasLiveKey(uid) {
-      let m = firestore.get(/databases/(default)/documents/members/$(uid));
-      return m != null && firestore.exists(/databases/(default)/documents/keys/$(m.data.key));
+    function hasLiveKey(uid, c) {
+      let m = firestore.get(/databases/(default)/documents/members/$(uid)).data;
+      // Ancienne fiche { key, at } : elle vaut pour la chorale 1
+      let k = m.get('keys', {}).get(c, c == '1' ? m.get('key', '') : '');
+      return k is string && k != ''
+        && firestore.get(/databases/(default)/documents/keys/$(k)).data.get('choir', '1') == c;
     }
-
-    // Audios : nom = empreinte SHA-256 du fichier (64 caractères hexadécimaux), moins de 40 Mo.
-    // Les .mp4 audio arrivent souvent en video/mp4 : on accepte audio/* et video/*.
-    match /audio/{hash} {
-      allow read, delete: if isMember();
-      allow create, update: if isMember()
-        && hash.matches('^[0-9a-f]{64}$')
+    function validAudio(hash) {
+      return hash.matches('^[0-9a-f]{64}$')
         && request.resource.size > 0
         && request.resource.size < 40 * 1024 * 1024
         && request.resource.contentType.lower().matches('(audio|video)/.+|application/(ogg|octet-stream)');
+    }
+
+    // Audios d'une chorale : audio/{chorale}/{sha256}
+    match /audio/{c}/{hash} {
+      allow read, delete: if memberOf(c);
+      allow create, update: if memberOf(c) && validAudio(hash);
+    }
+
+    // Transition : ancien emplacement de la chorale 1 (audio/{sha256}).
+    // À retirer après la migration (voir LISEZMOI).
+    match /audio/{hash} {
+      allow read, delete: if memberOf('1');
+      allow create, update: if memberOf('1') && validAudio(hash);
     }
 
     match /{other=**} {

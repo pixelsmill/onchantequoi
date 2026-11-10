@@ -35,7 +35,7 @@
 
 @if (expanded()) {
 
-<div class="label" [id]="id() + '-voix'">Voix annoncée par {{ teacher }}</div>
+<div class="label" [id]="id() + '-voix'">Voix annoncée par {{ store.teacher() }}</div>
 <div class="pills" role="group" [attr.aria-labelledby]="id() + '-voix'">
   @for (v of voices; track v.key) {
     <button

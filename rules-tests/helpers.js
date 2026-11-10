@@ -42,7 +42,10 @@ export async function seed(env, { keys = [KEY], members = {} } = {}) {
   });
 }
 
-export const addKey = (env, key) => asAdmin(env, (db) => setDoc(doc(db, 'keys', key), { note: 'test' }));
+// choir : chorale ouverte par la clé (absent = chorale 1, comme les clés d'avant)
+export const addKey = (env, key, choir) =>
+  asAdmin(env, (db) => setDoc(doc(db, 'keys', key), { note: 'test', ...(choir ? { choir } : {}) }));
+export const KEY2 = 'cle-chorale-deux-0123456'; // lien de la chorale 2
 export const removeKey = (env, key) => asAdmin(env, (db) => deleteDoc(doc(db, 'keys', key)));
 
 // Lecture sans les règles : données du document, ou null s'il n'existe pas

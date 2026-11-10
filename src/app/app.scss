@@ -141,3 +141,16 @@ main {
 :host(.has-player) .fab {
   bottom: calc(150px + env(safe-area-inset-bottom));
 }
+
+// Nom de la chorale quand le téléphone en a plusieurs : bouton qui ouvre le menu
+.choir-btn {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-align: left;
+  min-height: 44px;
+}

@@ -2,14 +2,28 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Un téléphone est « membre » s'il a rejoint avec une clé qui existe encore.
+    // Plusieurs chorales : choirs/{c}/songs et choirs/{c}/files (c = « 1 », « 2 »…).
+    // Un téléphone est membre de la chorale c s'il a rejoint avec une clé qui existe encore
+    // et qui ouvre cette chorale (keys/{clé}.choir, « 1 » si absent).
     // Supprimer une clé dans /keys coupe donc l'accès à tous ceux qui l'ont utilisée.
-    function isMember() {
-      return request.auth != null && hasLiveKey(request.auth.uid);
+    function memberOf(c) {
+      return request.auth != null && hasLiveKey(request.auth.uid, c);
     }
-    function hasLiveKey(uid) {
-      let m = get(/databases/$(database)/documents/members/$(uid));
-      return m != null && exists(/databases/$(database)/documents/keys/$(m.data.key));
+    function hasLiveKey(uid, c) {
+      let m = get(/databases/$(database)/documents/members/$(uid)).data;
+      // Ancienne fiche { key, at } : elle vaut pour la chorale 1
+      let k = m.get('keys', {}).get(c, c == '1' ? m.get('key', '') : '');
+      return k is string && k != '' && keyChoir(k) == c;
+    }
+    function keyChoir(k) {
+      return get(/databases/$(database)/documents/keys/$(k)).data.get('choir', '1');
+    }
+    function isChoirId(c) {
+      return c is string && c.matches('^[0-9a-z-]{1,20}$');
+    }
+    function isKey(k) {
+      // Même format de clé que la fonction depot : 10 à 128 caractères parmi A-Z a-z 0-9 _ -
+      return k is string && k.matches('^[A-Za-z0-9_-]{10,128}$');
     }
 
     // Les clés : jamais lisibles ni modifiables depuis l'app (gérées dans la console).
@@ -17,32 +31,68 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Rejoindre : on n'écrit que sa propre fiche, { key, at: serverTimestamp() }, avec une clé valide.
-    // Même format de clé que la fonction depot : 10 à 128 caractères parmi A-Z a-z 0-9 _ -
+    // Rejoindre : on n'écrit que sa propre fiche, avec une clé valide pour la chorale.
+    //   { keys: { <chorale>: <clé> }, last: <chorale ajoutée>, at: serverTimestamp() }
+    //   (ancienne version de l'app : { key, at }, pour la chorale 1)
     match /members/{uid} {
       allow get: if request.auth != null && request.auth.uid == uid;
       allow create, update: if request.auth != null && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['key', 'at'])
-        && request.resource.data.key is string
-        && request.resource.data.key.matches('^[A-Za-z0-9_-]{10,128}$')
-        && request.resource.data.at == request.time
-        && exists(/databases/$(database)/documents/keys/$(request.resource.data.key));
+        && validMember(request.resource.data, resource == null ? {} : resource.data);
       allow list, delete: if false;
     }
-
-    // Répertoire des morceaux : { title, voices: { S|A|H|T: { hash, at } }, lyrics?, createdAt, updatedAt }
-    match /songs/{songId} {
-      allow read, delete: if isMember();
-      allow create, update: if isMember() && validSong(request.resource.data);
+    function validMember(d, before) {
+      return d.keys().hasOnly(['key', 'keys', 'last', 'at'])
+        && d.at == request.time
+        && (legacyJoin(d, before) || choirJoin(d, before));
+    }
+    // Ancienne version de l'app : seule la clé (chorale 1) change
+    function legacyJoin(d, before) {
+      return isKey(d.get('key', null)) && keyChoir(d.key) == '1'
+        && d.get('keys', null) == before.get('keys', null)
+        && d.get('last', null) == before.get('last', null);
+    }
+    // Une seule chorale ajoutée ou changée à la fois (celle nommée dans last)
+    function choirJoin(d, before) {
+      return isChoirId(d.get('last', null))
+        && d.get('keys', null) is map
+        && d.keys.diff(before.get('keys', {})).affectedKeys().hasOnly([d.last])
+        && d.last in d.keys
+        && isKey(d.keys[d.last])
+        && keyChoir(d.keys[d.last]) == d.last
+        && d.get('key', null) == before.get('key', null);
     }
 
-    // Fichiers audio reçus (id = empreinte SHA-256 du fichier, évite les doublons)
+    // Nom de la chorale et du chef : { name, teacher } (créés dans la console ou par le script)
+    match /choirs/{c} {
+      allow get: if memberOf(c);
+      allow list, write: if false;
+
+      // Répertoire des morceaux : { title, voices: { S|A|H|T: { hash, at } }, lyrics?, createdAt, updatedAt }
+      match /songs/{songId} {
+        allow read, delete: if memberOf(c);
+        allow create, update: if memberOf(c) && validSong(request.resource.data);
+      }
+
+      // Fichiers audio reçus (id = empreinte SHA-256 du fichier, évite les doublons)
+      match /files/{hash} {
+        allow read, delete: if memberOf(c);
+        allow create: if memberOf(c) && isSha256(hash) && validNewFile(request.resource.data);
+        allow update: if memberOf(c)
+          && validFileChange(c, hash, request.resource.data, resource.data);
+      }
+    }
+
+    // Transition : anciens emplacements de la chorale 1, pour les téléphones qui n'ont pas
+    // encore la nouvelle version. À retirer après la migration (voir LISEZMOI).
+    match /songs/{songId} {
+      allow read, delete: if memberOf('1');
+      allow create, update: if memberOf('1') && validSong(request.resource.data);
+    }
     match /files/{hash} {
-      allow read, delete: if isMember();
-      // Dépôt : toujours dans « À classer », à l'heure du serveur
-      allow create: if isMember() && isSha256(hash) && validNewFile(request.resource.data);
-      // Classer (inbox → classified) ou « Mal classé ? » (retour en inbox)
-      allow update: if isMember() && validFileChange(hash, request.resource.data, resource.data);
+      allow read, delete: if memberOf('1');
+      allow create: if memberOf('1') && isSha256(hash) && validNewFile(request.resource.data);
+      allow update: if memberOf('1')
+        && validFileChange('', hash, request.resource.data, resource.data);
     }
 
     function isSha256(s) {
@@ -81,18 +131,22 @@ service cloud.firestore {
 
     // Seuls status, song, voice et createdAt (heure du serveur) peuvent changer.
     // Classer : seulement depuis « À classer » (le premier qui classe gagne), et le morceau
-    // doit contenir ce fichier pour cette voix à la fin de la transaction.
-    function validFileChange(hash, d, before) {
+    // (dans la même chorale) doit contenir ce fichier pour cette voix à la fin de la transaction.
+    // c = '' : ancien emplacement (songs à la racine)
+    function validFileChange(c, hash, d, before) {
       let changed = d.diff(before).affectedKeys();
       return changed.hasOnly(['status', 'song', 'voice', 'createdAt'])
         && (!('createdAt' in changed) || d.createdAt == request.time)
         && (!('song' in d) || d.song is string)
         && (!('voice' in d) || d.voice in ['S', 'A', 'H', 'T'])
         && (d.status == 'inbox'
-          || (d.status == 'classified' && before.status == 'inbox' && inSong(hash, d.song, d.voice)));
+          || (d.status == 'classified' && before.status == 'inbox'
+            && songAfter(c, d.song).voices[d.voice].hash == hash));
     }
-    function inSong(hash, songId, voice) {
-      return getAfter(/databases/$(database)/documents/songs/$(songId)).data.voices[voice].hash == hash;
+    function songAfter(c, songId) {
+      return c == ''
+        ? getAfter(/databases/$(database)/documents/songs/$(songId)).data
+        : getAfter(/databases/$(database)/documents/choirs/$(c)/songs/$(songId)).data;
     }
   }
 }

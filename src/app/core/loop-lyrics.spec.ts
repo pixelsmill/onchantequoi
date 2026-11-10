@@ -49,3 +49,29 @@ describe('Paroles en mode démo', () => {
     expect(Object.keys(s2.voices).length).toBe(4);
   });
 });
+
+describe('Plusieurs chorales en mode démo', () => {
+  it('chaque chorale a ses morceaux ; changer de chorale change les données', async () => {
+    const b = createDemoBackend(Date.now(), 0);
+    expect(await b.join('demo', '2')).toBe('ok');
+    expect((await b.choirMeta())?.teacher).toBe('Anne');
+    let songs: Song[] = [];
+    let off = b.onSongs(
+      (s) => (songs = s),
+      () => undefined,
+    );
+    await new Promise((r) => setTimeout(r));
+    expect(songs.map((s) => s.title).sort()).toEqual(['Amazing Grace', 'Dona nobis pacem']);
+    off();
+    expect(await b.join('demo', '1')).toBe('ok');
+    off = b.onSongs(
+      (s) => (songs = s),
+      () => undefined,
+    );
+    await new Promise((r) => setTimeout(r));
+    expect(songs.some((s) => s.title === 'Ave Verum Corpus')).toBe(true);
+    expect(songs.some((s) => s.title === 'Amazing Grace')).toBe(false);
+    off();
+    expect(await b.join('demo', '9')).toBe('denied');
+  });
+});

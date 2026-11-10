@@ -12,7 +12,6 @@ import {
   viewChild,
 } from '@angular/core';
 import { TablerIconComponent } from '@tabler/icons-angular';
-import { teacherName } from '../../config';
 import { ChoraleStore } from '../../core/chorale.store';
 import { ClockService } from '../../core/clock.service';
 import { DialogService } from '../../core/dialog.service';
@@ -50,7 +49,6 @@ export class InboxItem {
   private readonly queryInput = viewChild<ElementRef<HTMLInputElement>>('q');
 
   protected readonly voices = VOICES;
-  protected readonly teacher = teacherName;
   protected readonly voiceName = VOICE_NAME;
   protected readonly dateShort = dateShort;
   protected readonly open = signal(false);

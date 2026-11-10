@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { TablerIconComponent } from '@tabler/icons-angular';
-import { teacherName } from '../../config';
 import { ChoraleStore } from '../../core/chorale.store';
 import { ClockService } from '../../core/clock.service';
 import { DialogService, MenuAction } from '../../core/dialog.service';
@@ -9,7 +8,7 @@ import { LyricsService } from '../../core/lyrics.service';
 import { LYRICS_MAX, Song, VOICE_NAME, VoiceKey, VOICES } from '../../core/models';
 import { PlayerService } from '../../core/player.service';
 import { ToastService } from '../../core/toast.service';
-import { ago, dateShort, isFresh, norm } from '../../core/utils';
+import { ago, dateShort, isFresh, norm, ofName } from '../../core/utils';
 
 /** Onglet « Morceaux » : chaque morceau avec ses 4 boutons S · A · H · Tous */
 @Component({
@@ -29,8 +28,8 @@ export class SongsPage {
   protected readonly lyrics = inject(LyricsService);
   protected readonly voices = VOICES;
   protected readonly voiceName = VOICE_NAME;
-  protected readonly teacher = teacherName;
   protected readonly dateShort = dateShort;
+  protected readonly ofName = ofName;
   protected readonly query = signal('');
   protected readonly filtered = computed(() => {
     const q = norm(this.query());
