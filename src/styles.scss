@@ -18,6 +18,12 @@
   --T: #2a7247;
   --T-soft: #dcf1e3;
   --danger: #b3261e;
+  // Fonds du mode paroles (texte blanc, contraste AA dans les deux thèmes : pas redéfinis en sombre)
+  --deep-accent: #6a3289;
+  --deep-S: #a3244f;
+  --deep-A: #8f4a08;
+  --deep-H: #1f549f;
+  --deep-T: #24633d;
   --shadow: 0 1px 2px rgba(40, 20, 60, 0.06), 0 2px 8px rgba(40, 20, 60, 0.06);
   --radius: 16px;
   --max: 640px;
@@ -247,4 +253,15 @@ ul {
   color: var(--muted);
   font-weight: 600;
   margin: 10px 0 6px;
+}
+
+// <dialog> sur iOS 15.0 à 15.3 (pas de showModal) : affiché par l'attribut open, au-dessus de tout
+dialog:not([open]) {
+  display: none;
+}
+dialog[open] {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 30;
 }

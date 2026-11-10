@@ -10,6 +10,7 @@ import { ACCEPT } from './core/utils';
 import { Gate } from './features/gate/gate';
 import { DialogHost } from './shared/dialog-host';
 import { DropZone } from './shared/drop-zone';
+import { LyricsView } from './shared/lyrics-view';
 import { PlayerBar } from './shared/player-bar';
 import { Toast } from './shared/toast';
 
@@ -24,6 +25,7 @@ import { Toast } from './shared/toast';
     Gate,
     DialogHost,
     DropZone,
+    LyricsView,
     PlayerBar,
     Toast,
   ],

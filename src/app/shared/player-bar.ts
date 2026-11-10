@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { TablerIconComponent } from '@tabler/icons-angular';
 import { ChoraleStore } from '../core/chorale.store';
 import { DialogService } from '../core/dialog.service';
+import { LyricsService } from '../core/lyrics.service';
 import { VOICE_NAME } from '../core/models';
 import { PlayerService, Track } from '../core/player.service';
 import { ToastService } from '../core/toast.service';
@@ -29,12 +30,26 @@ import { clock } from '../core/utils';
           <div class="info">
             <div class="title">{{ t.title }}</div>
             <div class="sub">
-              {{ t.voice ? voiceName[t.voice] : t.sub }} · {{ clock(player.time()) }}
+              {{ t.voice ? voiceName[t.voice] : t.sub }}
+              @if (player.playlistLabel(); as n) {
+                · boucle {{ n }}
+              }
+              · {{ clock(player.time()) }}
               @if (player.duration()) {
                 / {{ clock(player.duration()) }}
               }
             </div>
           </div>
+          @if (player.playlist()) {
+            <button
+              type="button"
+              class="icon-btn"
+              (click)="player.next()"
+              aria-label="Morceau suivant de la boucle"
+            >
+              <tabler-icon icon="player-skip-forward-filled" [size]="22" />
+            </button>
+          }
           <button type="button" class="icon-btn" (click)="player.stop()" aria-label="Fermer le lecteur">
             <tabler-icon icon="x" [size]="22" />
           </button>
@@ -65,8 +80,13 @@ import { clock } from '../core/utils';
             [attr.aria-pressed]="player.loop()"
             (click)="player.toggleLoop()"
           >
-            Boucle
+            Répéter
           </button>
+          @if (hasLyrics(t)) {
+            <button type="button" class="chip-btn lyr" (click)="lyrics.open(t.songId!)">
+              Paroles
+            </button>
+          }
           @if (t.songId && t.voice) {
             <button type="button" class="link-btn wrong" (click)="wrong(t)">Mal classé ?</button>
           }
@@ -130,6 +150,10 @@ import { clock } from '../core/utils';
       color: var(--accent);
       border-color: var(--accent);
     }
+    .lyr {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
     .wrong {
       margin-left: auto;
     }
@@ -140,8 +164,13 @@ export class PlayerBar {
   private readonly store = inject(ChoraleStore);
   private readonly dialog = inject(DialogService);
   private readonly toast = inject(ToastService);
+  protected readonly lyrics = inject(LyricsService);
   protected readonly voiceName = VOICE_NAME;
   protected readonly clock = clock;
+
+  protected hasLyrics(t: Track): boolean {
+    return !!this.store.songById(t.songId)?.lyrics;
+  }
 
   protected position(): number {
     return Math.round(this.player.progress() * 1000);

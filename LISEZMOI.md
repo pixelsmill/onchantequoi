@@ -123,7 +123,9 @@ La fonction traite 3 envois à la fois ; au-delà, elle demande de réessayer (e
 - Si deux personnes déposent le même audio, il n'est gardé qu'une fois. Si deux personnes classent le même audio en même temps, c'est le premier qui compte.
 - Un nouvel enregistrement **remplace** l'ancien pour la même voix du même morceau, et l'ancien fichier est supprimé.
 - **Mal classé ?** : dans le lecteur, ce bouton renvoie l'audio dans « À classer ».
-- Le lecteur propose aussi un retour de 10 s, une vitesse 1× / 0,85× / 0,7× (sans changer la hauteur des notes) et une boucle. Il se pilote depuis l'écran verrouillé.
+- Le lecteur propose aussi un retour de 10 s, une vitesse 1× / 0,85× / 0,7× (sans changer la hauteur des notes) et « Répéter » (le même enregistrement en boucle). Il se pilote depuis l'écran verrouillé.
+- **Paroles** : menu **⋯** d'un morceau › *Ajouter les paroles*, puis coller le texte (une ligne vide entre les couplets ; visible par toute la chorale). Le picto micro du morceau, ou « Paroles » dans le lecteur, les affiche en plein écran, en grand, avec le lecteur en bas. Le bouton « AA » change la taille du texte.
+- **Boucle sur une sélection** : le picto boucle d'un morceau l'ajoute à la sélection (retenue sur le téléphone). En haut de la liste, on choisit la voix puis **Lancer** : les morceaux s'enchaînent dans l'ordre et repartent au premier. Un morceau sans la voix choisie est joué en « Tous », ou sauté s'il n'en a pas. Sur l'écran verrouillé, « suivant » passe au morceau suivant.
 - Les morceaux sont rangés **par ordre alphabétique**.
 - **Morceau reçu en plusieurs extraits** (déchiffrage : début, fin…) : créez un morceau par extrait, par exemple « Siyahamba – début » et « Siyahamba – fin ». Ils se suivent dans la liste. Quand la version complète arrive, classez-la dans « Siyahamba », puis supprimez les extraits.
 - Le menu **⋯** d'un morceau permet de le renommer, ou de le supprimer avec ses enregistrements (après confirmation, pour tout le monde).
@@ -139,7 +141,7 @@ La fonction traite 3 envois à la fois ; au-delà, elle demande de réessayer (e
 | `npm run test:rules` | les règles Firestore et Storage dans l'émulateur : non-membre refusé, clé supprimée donc accès coupé, `keys` illisible, etc. |
 | `npm run test:depot` | la fonction `depot` de bout en bout dans les émulateurs : dépôt, doublon, clé invalide, fichier refusé, multipart |
 
-Résultats au 29 septembre 2026 : 36 tests pour l'app, 17 pour la fonction, 35 pour les règles (vérifiés aussi contre des règles volontairement affaiblies) et 12 de bout en bout.
+Résultats au 10 novembre 2026 : 42 tests pour l'app et 36 pour les règles (vérifiés aussi contre des règles volontairement affaiblies). Au 29 septembre : 17 pour la fonction et 12 de bout en bout.
 
 Les deux dernières commandes lancent les émulateurs Firebase. Elles demandent `firebase-tools` et **Java 21 ou plus** : le Java par défaut de ce PC est un Java 8, trop ancien. Celui d'Android Studio convient :
 
@@ -200,6 +202,9 @@ Le paramètre `?emu` (seulement sur `localhost`) branche l'app sur les émulateu
 - **Plusieurs personnes en même temps** : « Mal classé ? » ne retire l'audio que s'il occupe toujours la voix. Supprimer un audio ou un morceau vérifie qu'il n'a pas été classé ou complété entre-temps. Un audio qu'on a commencé à classer garde le morceau affiché, même si quelqu'un classe autre chose.
 - **Réseau faible** : si le lien ne peut pas être vérifié, l'app propose « Réessayer » au lieu de dire que le lien est invalide. Les audios partagés depuis Android restent en attente sur le téléphone tant qu'ils ne sont pas envoyés.
 - **Sécurité** : règles Firestore et Storage testées dans l'émulateur. L'en-tête `Referrer-Policy: strict-origin-when-cross-origin` garantit que le lien complet (qui contient la clé) n'est jamais transmis aux autres sites.
+
+- **Vieux iPhone** : Angular 21 vise par défaut iOS 16.4 et plus. En dessous, le code de l'app n'est pas compris et l'écran reste blanc. `.browserslistrc` ajoute **iOS 15** aux navigateurs visés (Angular prévient au build que ce n'est pas officiellement pris en charge), et `src/polyfills.ts` ajoute les deux fonctions qui manquent à iOS 15.0 à 15.3. En dessous d'iOS 15, `index.html` affiche « iPhone trop ancien » avec la version d'iOS du téléphone, au lieu d'un écran blanc.
+- Plusieurs chorales dans la même app : étude dans [docs/etude-multi-chorales.md](docs/etude-multi-chorales.md).
 
 ### À vérifier au premier essai
 

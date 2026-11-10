@@ -2,7 +2,7 @@
 // (le client Angular fait les mêmes). Différences : les erreurs ne sont pas avalées, pour que
 // les tests voient les refus des règles, et les suppressions Storage sont attendues.
 import {
-  collection, deleteDoc, doc, getDoc, getDocs, limit, onSnapshot, query, runTransaction,
+  collection, deleteDoc, deleteField, doc, getDoc, getDocs, limit, onSnapshot, query, runTransaction,
   serverTimestamp, setDoc, updateDoc, where,
 } from 'firebase/firestore';
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
@@ -109,6 +109,8 @@ export function client(db, storage) {
     },
 
     renameSong: (songId, title) => updateDoc(doc(db, 'songs', songId), { title: title.trim() }),
+    setLyrics: (songId, lyrics) =>
+      updateDoc(doc(db, 'songs', songId), { lyrics: lyrics.trim() || deleteField() }),
     deleteSong: (songId) => deleteDoc(doc(db, 'songs', songId)),
     url: (hash) => getDownloadURL(ref(storage, `audio/${hash}`)),
   };

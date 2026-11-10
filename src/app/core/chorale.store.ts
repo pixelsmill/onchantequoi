@@ -209,6 +209,10 @@ export class ChoraleStore {
     return this.api.renameSong(songId, title);
   }
 
+  setLyrics(songId: string, lyrics: string): Promise<void> {
+    return this.api.setLyrics(songId, lyrics);
+  }
+
   deleteSong(songId: string, hashes: string[]): Promise<boolean> {
     return this.api.deleteSong(songId, hashes);
   }

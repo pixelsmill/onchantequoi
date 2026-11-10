@@ -8,6 +8,21 @@ import {
 } from '@angular/core';
 import { DialogService } from '../core/dialog.service';
 
+/**
+ * Ouvre un <dialog> en modal. iOS 15.0 à 15.3 n'a pas showModal : on l'affiche quand même
+ * (attribut open, styles .sheet[open] dans styles.scss), sans fond grisé.
+ */
+export function openModal(el: HTMLDialogElement): void {
+  if (typeof el.showModal === 'function') el.showModal();
+  else el.setAttribute('open', '');
+}
+
+/** Ferme un <dialog> ouvert par openModal */
+export function closeModal(el: HTMLDialogElement): void {
+  if (typeof el.close === 'function') el.close();
+  else el.removeAttribute('open');
+}
+
 /** Feuille modale en bas de l'écran (élément <dialog> natif : focus et Échap gérés) */
 @Component({
   selector: 'app-dialog-host',
@@ -60,6 +75,28 @@ import { DialogService } from '../core/dialog.service';
                 </div>
               </form>
             }
+            @case ('text') {
+              <form (submit)="$event.preventDefault(); dialog.close(area.value.trim())">
+                <label class="visually-hidden" for="sheet-text">{{ d.title }}</label>
+                <textarea
+                  #area
+                  id="sheet-text"
+                  class="field area"
+                  rows="10"
+                  autofocus
+                  aria-describedby="sheet-hint"
+                  [attr.maxlength]="d.max"
+                  [value]="d.value"
+                ></textarea>
+                <p id="sheet-hint" class="note">{{ d.hint }}</p>
+                <div class="row">
+                  <button type="button" class="secondary" (click)="dialog.close(null)">
+                    Annuler
+                  </button>
+                  <button type="submit" class="primary">Enregistrer</button>
+                </div>
+              </form>
+            }
             @case ('menu') {
               <div class="menu">
                 @for (a of d.actions; track a.id) {
@@ -107,6 +144,13 @@ import { DialogService } from '../core/dialog.service';
     .field {
       margin: 6px 0 14px;
     }
+    .area {
+      display: block;
+      resize: vertical;
+      min-height: 40dvh;
+      margin-bottom: 8px;
+      line-height: 1.45;
+    }
     .row {
       display: flex;
       gap: 10px;
@@ -144,12 +188,13 @@ export class DialogHost {
       const req = this.dialog.current();
       const el = this.dlg().nativeElement;
       if (!req) {
-        if (el.open) el.close();
+        if (el.hasAttribute('open')) closeModal(el);
         return;
       }
-      if (!el.open) el.showModal?.();
-      const field = el.querySelector<HTMLInputElement>('input[autofocus]');
-      if (field) {
+      if (!el.hasAttribute('open')) openModal(el);
+      const field = el.querySelector<HTMLInputElement | HTMLTextAreaElement>('[autofocus]');
+      if (field instanceof HTMLTextAreaElement) field.focus();
+      else if (field) {
         field.focus();
         field.select();
       } else el.querySelector('button')?.focus();

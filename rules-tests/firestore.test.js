@@ -66,6 +66,7 @@ describe('Non-membre', () => {
     await assertFails(eve.classify({ hash: h, voice: 'A', songId }));
     await assertFails(eve.unclassify(songId, 'S'));
     await assertFails(eve.renameSong(songId, 'Pirate'));
+    await assertFails(eve.setLyrics(songId, 'Pirate'));
     await assertFails(eve.deleteSong(songId));
     await assertFails(eve.removeInbox(h));
     await assertFails(setDoc(doc(db('eve'), 'songs', 'nouveau'), { title: 'Pirate', voices: {}, createdAt: 1, updatedAt: 1 }));
@@ -351,6 +352,23 @@ describe('Membre : opérations de l\'app', () => {
     await assertFails(a.renameSong(songId, 'x'.repeat(121)));
     await assertSucceeds(a.renameSong(songId, 'x'.repeat(120)));
     await assertFails(updateDoc(doc(db('alice'), 'songs', songId), { title: 'Titre', pirate: true }));
+  });
+
+  test('paroles : texte de 20 000 caractères au plus, gardées au classement', async () => {
+    const { songId } = await songWith();
+    const a = alice();
+    await assertSucceeds(a.setLyrics(songId, 'Ave verum corpus\n\nnatum de Maria'));
+    assert.equal((await read(env, `songs/${songId}`)).lyrics, 'Ave verum corpus\n\nnatum de Maria');
+    await assertFails(a.setLyrics(songId, 'x'.repeat(20001)));
+    await assertSucceeds(a.setLyrics(songId, 'x'.repeat(20000)));
+    await assertFails(updateDoc(doc(db('alice'), 'songs', songId), { lyrics: 42 }));
+    // Classer un nouvel audio dans ce morceau ne perd pas les paroles
+    const h = await inboxFile();
+    await assertSucceeds(a.classify({ hash: h, voice: 'A', songId }));
+    assert.equal((await read(env, `songs/${songId}`)).lyrics, 'x'.repeat(20000));
+    // Texte vide : les paroles sont retirées
+    await assertSucceeds(a.setLyrics(songId, '   '));
+    assert.equal('lyrics' in (await read(env, `songs/${songId}`)), false);
   });
 
   test('supprimer un morceau', async () => {

@@ -30,6 +30,8 @@ export interface Song {
   id: string;
   title: string;
   voices: Partial<Record<VoiceKey, Recording>>;
+  /** Paroles collées par un choriste (texte brut, une ligne vide entre les couplets) */
+  lyrics?: string;
   createdAt?: number;
   updatedAt?: number;
 }
@@ -45,6 +47,9 @@ export interface InboxFile {
   duration?: number;
   createdAt: number;
 }
+
+/** Taille maximale des paroles (caractères), vérifiée aussi par firestore.rules */
+export const LYRICS_MAX = 20000;
 
 /** Ce qu'on enregistre avec un audio déposé */
 export interface UploadMeta {
@@ -86,6 +91,8 @@ export interface Backend {
   /** Supprime un audio encore à classer. false s'il a été classé entre-temps. */
   removeInbox(hash: string): Promise<boolean>;
   renameSong(songId: string, title: string): Promise<void>;
+  /** Paroles du morceau ; texte vide = paroles retirées */
+  setLyrics(songId: string, lyrics: string): Promise<void>;
   /**
    * Supprime un morceau et ses enregistrements (ceux montrés à l'utilisateur : hashes).
    * false si le morceau a changé entre-temps (voix ajoutée ou remplacée).

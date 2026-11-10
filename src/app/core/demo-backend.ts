@@ -76,13 +76,21 @@ export function createDemoBackend(now = Date.now(), delay = 150): Backend {
   song('s1', 'Ave Verum Corpus', { S: [523], A: [392], H: [196], T: [523, 392, 196] }, now - 8 * day);
   song('s2', 'Le Lion est mort ce soir', { S: [587], A: [440], H: [220], T: [587, 440, 220] }, now - day);
   song('s3', 'Hallelujah (Cohen)', { S: [494], A: [370], T: [494, 370, 185] }, now - 15 * day);
+  // Texte du XIVe siècle, libre de droits
+  songs.get('s1')!.lyrics = [
+    'Ave, verum corpus,\nnatum de Maria Virgine,',
+    'vere passum, immolatum\nin cruce pro homine,',
+    'cujus latus perforatum\nfluxit aqua et sanguine:',
+    'esto nobis praegustatum\nin mortis examine.',
+  ].join('\n\n');
   add([659], { createdAt: now - 20 * 60_000 });
   add([220], { createdAt: now - 19 * 60_000 });
   add([659, 494, 247], { createdAt: now - 18 * 60_000 });
   add([494], { createdAt: now - 17 * 60_000 });
 
   const emit = () => {
-    const s = [...songs.values()].map((x) => structuredClone(x));
+    // Copie (pas structuredClone : absent des iPhone sous iOS 15.0 à 15.3)
+    const s = [...songs.values()].map((x) => ({ ...x, voices: { ...x.voices } }));
     const i = [...files.values()]
       .filter((f) => f.status === 'inbox')
       .map(({ status: _s, song: _g, voice: _v, ...f }) => f);
@@ -178,6 +186,16 @@ export function createDemoBackend(now = Date.now(), delay = 150): Backend {
       return later(() => {
         const s = songs.get(id);
         if (s) s.title = title.trim();
+        emit();
+      });
+    },
+    setLyrics(id, lyrics) {
+      return later(() => {
+        const s = songs.get(id);
+        if (!s) return;
+        const text = lyrics.trim();
+        if (text) s.lyrics = text;
+        else delete s.lyrics;
         emit();
       });
     },

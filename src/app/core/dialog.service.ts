@@ -23,6 +23,14 @@ export type DialogRequest =
       resolve: (v: string | null) => void;
     }
   | {
+      kind: 'text';
+      title: string;
+      value: string;
+      hint: string;
+      max: number;
+      resolve: (v: string | null) => void;
+    }
+  | {
       kind: 'menu';
       title: string;
       actions: MenuAction[];
@@ -41,6 +49,11 @@ export class DialogService {
 
   prompt(title: string, value: string, ok = 'Enregistrer'): Promise<string | null> {
     return new Promise((resolve) => this.open({ kind: 'prompt', title, value, ok, resolve }));
+  }
+
+  /** Saisie d'un long texte (paroles). Renvoie le texte, éventuellement vide, ou null si annulé. */
+  text(title: string, value: string, hint: string, max: number): Promise<string | null> {
+    return new Promise((resolve) => this.open({ kind: 'text', title, value, hint, max, resolve }));
   }
 
   menu(title: string, actions: MenuAction[], note = ''): Promise<string | null> {

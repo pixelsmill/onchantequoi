@@ -10,6 +10,45 @@
   />
 }
 
+@if (loop.songs().length; as n) {
+  <section class="card loop" aria-labelledby="loop-title">
+    <h2 id="loop-title">
+      <tabler-icon icon="repeat" [size]="20" />
+      Boucle · {{ n }} morceau{{ n > 1 ? 'x' : '' }}
+    </h2>
+    <div class="loop-voices" role="group" aria-label="Voix de la boucle">
+      @for (v of voices; track v.key) {
+        <button
+          type="button"
+          class="lv"
+          [attr.data-v]="v.key"
+          [attr.aria-pressed]="loop.voice() === v.key"
+          [attr.aria-label]="v.long"
+          (click)="loop.setVoice(v.key)"
+        >
+          {{ v.short }}
+        </button>
+      }
+    </div>
+    @for (s of loop.fallbacks(); track s.id) {
+      <p class="sub">
+        {{ s.title }} : pas de voix {{ voiceName[loop.voice()] }},
+        {{ s.voices.T ? 'joué en Tous' : 'sauté' }}
+      </p>
+    }
+    <div class="loop-actions">
+      @if (loop.active()) {
+        <button type="button" class="secondary" (click)="player.stop()">Arrêter la boucle</button>
+      } @else {
+        <button type="button" class="primary" (click)="startLoop()">
+          Lancer en {{ voiceName[loop.voice()] }}
+        </button>
+      }
+      <button type="button" class="link-btn" (click)="loop.clear()">Vider</button>
+    </div>
+  </section>
+}
+
 @if (!store.songsLoaded()) {
   <p class="empty" aria-live="polite">Chargement…</p>
 } @else {
@@ -28,6 +67,25 @@
               <p class="sub">Mis à jour {{ ago(song.updatedAt) }}</p>
             }
           </div>
+          @if (song.lyrics) {
+            <button
+              type="button"
+              class="icon-btn"
+              [attr.aria-label]="'Paroles de ' + song.title"
+              (click)="lyrics.open(song.id)"
+            >
+              <tabler-icon icon="microphone-2" [size]="22" />
+            </button>
+          }
+          <button
+            type="button"
+            class="icon-btn loop-btn"
+            [attr.aria-pressed]="loop.has(song.id)"
+            [attr.aria-label]="'Boucle : ' + song.title"
+            (click)="loop.toggle(song.id)"
+          >
+            <tabler-icon icon="repeat" [size]="22" />
+          </button>
           <button
             type="button"
             class="icon-btn"

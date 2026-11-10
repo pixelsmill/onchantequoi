@@ -1,7 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { choirName } from '../config';
 import { ChoraleStore } from './chorale.store';
-import { VOICE_NAME, VoiceKey } from './models';
+import { Song, VOICE_NAME, VoiceKey } from './models';
 import { ToastService } from './toast.service';
 
 export interface Track {
@@ -14,6 +14,24 @@ export interface Track {
 }
 
 export const SPEEDS = [1, 0.85, 0.7] as const;
+
+/** Sélection lue en boucle : les morceaux dans l'ordre, pour une voix */
+export interface Playlist {
+  ids: string[];
+  voice: VoiceKey;
+  /** Morceau en cours dans ids */
+  index: number;
+}
+
+/**
+ * Enregistrement à jouer pour un morceau de la sélection : la voix choisie,
+ * sinon « Tous ». null si le morceau n'a ni l'une ni l'autre.
+ */
+export function pickVoice(song: Song | undefined, voice: VoiceKey): VoiceKey | null {
+  if (!song) return null;
+  if (song.voices[voice]) return voice;
+  return song.voices.T ? 'T' : null;
+}
 
 /** 0,1 s de silence : sert à « débloquer » l'audio sur iPhone au premier toucher */
 function silentWav(): Blob {
@@ -55,6 +73,13 @@ export class PlayerService {
   readonly speed = computed(() => SPEEDS[this.speedIndex()]);
   readonly speedLabel = computed(() => `Vitesse ${String(this.speed()).replace('.', ',')}×`);
   readonly loop = signal(false);
+  /** Sélection en cours de lecture (null = un seul enregistrement) */
+  readonly playlist = signal<Playlist | null>(null);
+  /** « 2/3 » quand une sélection est lue */
+  readonly playlistLabel = computed(() => {
+    const p = this.playlist();
+    return p ? `${p.index + 1}/${p.ids.length}` : '';
+  });
   readonly progress = computed(() => (this.duration() ? this.time() / this.duration() : 0));
 
   constructor() {
@@ -66,7 +91,11 @@ export class PlayerService {
     a.addEventListener('playing', () => active() && this.playing.set(true));
     a.addEventListener('play', () => active() && this.playing.set(true));
     a.addEventListener('pause', () => this.playing.set(false));
-    a.addEventListener('ended', () => this.playing.set(false));
+    a.addEventListener('ended', () => {
+      this.playing.set(false);
+      // Sélection : morceau suivant (le dernier repart au premier)
+      if (this.playlist() && this.track()) this.next();
+    });
     a.addEventListener('timeupdate', () => active() && this.time.set(a.currentTime));
     const dur = () => active() && this.duration.set(Number.isFinite(a.duration) ? a.duration : 0);
     a.addEventListener('durationchange', dur);
@@ -93,7 +122,79 @@ export class PlayerService {
   }
 
   /** À appeler dans le geste de l'utilisateur (toucher d'un bouton de lecture) */
-  async play(t: Track): Promise<void> {
+  play(t: Track): Promise<void> {
+    this.setPlaylist(null);
+    return this.load(t);
+  }
+
+  /**
+   * Lit une sélection de morceaux en boucle, pour une voix (« Tous » si elle manque).
+   * false si aucun morceau n'a d'enregistrement à jouer.
+   */
+  playList(ids: string[], voice: VoiceKey, from = 0): boolean {
+    const p = { ids: [...ids], voice, index: from };
+    const i = this.playable(p, from, 1);
+    if (i < 0) return false;
+    this.setPlaylist({ ...p, index: i });
+    this.loadIndex();
+    return true;
+  }
+
+  /** Morceau suivant (ou précédent) de la sélection */
+  next(step: 1 | -1 = 1): void {
+    const p = this.playlist();
+    if (!p) return;
+    const i = this.playable(p, p.index + step, step);
+    if (i < 0) {
+      this.stop();
+      return;
+    }
+    this.playlist.set({ ...p, index: i });
+    this.loadIndex();
+  }
+
+  /** Premier morceau jouable à partir de start (en tournant), -1 s'il n'y en a aucun */
+  private playable(p: Playlist, start: number, step: 1 | -1): number {
+    const n = p.ids.length;
+    for (let k = 0; k < n; k++) {
+      const i = (((start + k * step) % n) + n) % n;
+      if (pickVoice(this.store.songById(p.ids[i]), p.voice)) return i;
+    }
+    return -1;
+  }
+
+  private loadIndex(): void {
+    const p = this.playlist();
+    if (!p) return;
+    const song = this.store.songById(p.ids[p.index]);
+    const voice = pickVoice(song, p.voice);
+    const rec = voice && song?.voices[voice];
+    if (!song || !voice || !rec) return;
+    this.load({ hash: rec.hash, title: song.title, sub: '', songId: song.id, voice });
+    // Le suivant est préparé : il démarre sans attendre à la fin de celui-ci
+    const after = this.store.songById(p.ids[this.playable(p, p.index + 1, 1)]);
+    const v2 = pickVoice(after, p.voice);
+    if (after && v2) this.prefetch(after.voices[v2]!.hash);
+  }
+
+  private setPlaylist(p: Playlist | null): void {
+    this.playlist.set(p);
+    const ms = globalThis.navigator?.mediaSession;
+    if (!ms) return;
+    // Écran verrouillé : « suivant / précédent » seulement pendant une sélection
+    for (const [action, fn] of [
+      ['nexttrack', () => this.next(1)],
+      ['previoustrack', () => this.next(-1)],
+    ] as const) {
+      try {
+        ms.setActionHandler(action, p ? fn : null);
+      } catch {
+        // action non gérée par ce navigateur
+      }
+    }
+  }
+
+  private async load(t: Track): Promise<void> {
     const a = this.audio;
     if (!a) return;
     this.track.set(t);
@@ -144,6 +245,7 @@ export class PlayerService {
 
   stop(): void {
     const a = this.audio;
+    this.setPlaylist(null);
     this.track.set(null);
     this.playing.set(false);
     if (!a) return;

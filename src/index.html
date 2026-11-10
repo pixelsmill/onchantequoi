@@ -17,6 +17,47 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <style>
+    .too-old { font: 17px/1.45 -apple-system, system-ui, sans-serif; max-width: 30em; margin: 0 auto; padding: 48px 20px; }
+    .too-old h1 { font-size: 22px; margin: 0 0 12px; }
+  </style>
+  <script>
+    // Téléphone trop ancien : un message au lieu d'un écran blanc.
+    // Script classique (pas un module) : il s'exécute même quand le navigateur ne comprend pas l'app.
+    (function () {
+      var shown = false;
+      function started() {
+        var root = document.querySelector('app-root');
+        return !!(root && root.children.length);
+      }
+      function show() {
+        if (shown || started() || !document.body) return;
+        shown = true;
+        var ua = navigator.userAgent;
+        var ios = /iPhone|iPad|iPod/.test(ua);
+        var v = /OS (\d+)_(\d+)/.exec(ua);
+        var box = document.createElement('div');
+        box.className = 'too-old';
+        box.setAttribute('role', 'alert');
+        box.innerHTML = ios
+          ? '<h1>iPhone trop ancien</h1><p>L’app de la chorale demande iOS 15 ou plus récent' +
+            (v ? ' (cet iPhone : iOS ' + v[1] + '.' + v[2] + ')' : '') +
+            '.</p><p>Mettez l’iPhone à jour : Réglages › Général › Mise à jour logicielle. Sinon, ouvrez le lien sur un autre téléphone ou un ordinateur.</p>'
+          : '<h1>Navigateur trop ancien</h1><p>L’app de la chorale ne fonctionne pas avec ce navigateur. Mettez-le à jour, ou ouvrez le lien avec un autre navigateur (Chrome, Safari, Firefox).</p>';
+        document.body.insertBefore(box, document.body.firstChild);
+      }
+      // Syntaxe récente utilisée par l'app (iOS 15 et plus)
+      try {
+        new Function('class A { #p() {} static t(o) { return #p in o; } } return (null)?.x ?? 1;');
+      } catch (e) {
+        document.addEventListener('DOMContentLoaded', show);
+      }
+      // L'app plante avant d'avoir affiché quoi que ce soit (fonction manquante, fichier illisible)
+      window.addEventListener('error', function () {
+        setTimeout(show, 0);
+      });
+    })();
+  </script>
 </head>
 <body>
   <app-root></app-root>

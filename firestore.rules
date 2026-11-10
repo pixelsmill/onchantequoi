@@ -30,7 +30,7 @@ service cloud.firestore {
       allow list, delete: if false;
     }
 
-    // Répertoire des morceaux : { title, voices: { S|A|H|T: { hash, at } }, createdAt, updatedAt }
+    // Répertoire des morceaux : { title, voices: { S|A|H|T: { hash, at } }, lyrics?, createdAt, updatedAt }
     match /songs/{songId} {
       allow read, delete: if isMember();
       allow create, update: if isMember() && validSong(request.resource.data);
@@ -50,9 +50,10 @@ service cloud.firestore {
     }
 
     function validSong(d) {
-      return d.keys().hasOnly(['title', 'voices', 'createdAt', 'updatedAt'])
+      return d.keys().hasOnly(['title', 'voices', 'lyrics', 'createdAt', 'updatedAt'])
         && d.title is string && d.title.trim().size() > 0 && d.title.size() <= 120
         && (!('voices' in d) || validVoices(d.voices))
+        && (!('lyrics' in d) || (d.lyrics is string && d.lyrics.size() <= 20000))
         && (!('createdAt' in d) || d.createdAt is number)
         && (!('updatedAt' in d) || d.updatedAt is number);
     }

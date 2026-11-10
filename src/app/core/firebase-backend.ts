@@ -92,6 +92,7 @@ function toSong(id: string, d: DocumentData): Song {
     id,
     title: String(d['title'] ?? ''),
     voices: d['voices'] ?? {},
+    ...(typeof d['lyrics'] === 'string' && d['lyrics'] ? { lyrics: d['lyrics'] } : {}),
     createdAt: millis(d['createdAt']),
     updatedAt: millis(d['updatedAt']),
   };
@@ -290,6 +291,11 @@ export async function createFirebaseBackend(
 
     async renameSong(songId, title) {
       await updateDoc(doc(db, 'songs', songId), { title: title.trim() });
+    },
+
+    async setLyrics(songId, lyrics) {
+      const text = lyrics.trim();
+      await updateDoc(doc(db, 'songs', songId), { lyrics: text || deleteField() });
     },
 
     async deleteSong(songId, hashes) {

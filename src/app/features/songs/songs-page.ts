@@ -4,7 +4,9 @@ import { teacherName } from '../../config';
 import { ChoraleStore } from '../../core/chorale.store';
 import { ClockService } from '../../core/clock.service';
 import { DialogService, MenuAction } from '../../core/dialog.service';
-import { Song, VOICE_NAME, VoiceKey, VOICES } from '../../core/models';
+import { LoopService } from '../../core/loop.service';
+import { LyricsService } from '../../core/lyrics.service';
+import { LYRICS_MAX, Song, VOICE_NAME, VoiceKey, VOICES } from '../../core/models';
 import { PlayerService } from '../../core/player.service';
 import { ToastService } from '../../core/toast.service';
 import { ago, dateShort, isFresh, norm } from '../../core/utils';
@@ -23,7 +25,10 @@ export class SongsPage {
   private readonly clock = inject(ClockService);
   private readonly dialog = inject(DialogService);
   private readonly toast = inject(ToastService);
+  protected readonly loop = inject(LoopService);
+  protected readonly lyrics = inject(LyricsService);
   protected readonly voices = VOICES;
+  protected readonly voiceName = VOICE_NAME;
   protected readonly teacher = teacherName;
   protected readonly dateShort = dateShort;
   protected readonly query = signal('');
@@ -50,6 +55,10 @@ export class SongsPage {
     this.player.play({ hash: rec.hash, title: song.title, sub: '', songId: song.id, voice });
   }
 
+  protected startLoop(): void {
+    if (!this.loop.start()) this.toast.show('Aucun enregistrement à lire pour cette voix');
+  }
+
   protected async menu(song: Song): Promise<void> {
     // Enregistrements du morceau, dans l'ordre S · A · H · Tous
     const recs = VOICES.flatMap((v) => {
@@ -58,6 +67,7 @@ export class SongsPage {
     });
     const actions: MenuAction[] = [
       { id: 'rename', label: 'Renommer' },
+      { id: 'lyrics', label: song.lyrics ? 'Modifier les paroles' : 'Ajouter les paroles' },
       {
         id: 'delete',
         label: recs.length ? 'Supprimer le morceau et ses enregistrements' : 'Supprimer le morceau',
@@ -72,6 +82,18 @@ export class SongsPage {
         if (title && title !== song.title) {
           await this.store.renameSong(song.id, title);
           this.toast.show('Morceau renommé');
+        }
+      }
+      if (choice === 'lyrics') {
+        const text = await this.dialog.text(
+          `Paroles · ${song.title}`,
+          song.lyrics ?? '',
+          'Collez le texte. Une ligne vide sépare les couplets. Visible par toute la chorale ; vider le champ retire les paroles.',
+          LYRICS_MAX,
+        );
+        if (text !== null && text !== (song.lyrics ?? '')) {
+          await this.store.setLyrics(song.id, text);
+          this.toast.show(text ? 'Paroles enregistrées' : 'Paroles retirées');
         }
       }
       if (choice === 'delete') {

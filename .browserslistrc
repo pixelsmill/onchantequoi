@@ -1,0 +1,13 @@
+# Navigateurs visés par le build (syntaxe JavaScript et CSS).
+# Angular 21 vise par défaut Safari / iOS 16.4 et plus récents : un iPhone resté en iOS 15
+# ou 16.0-16.3 affichait un écran blanc (blocs « static { } » des classes, non compris).
+# iOS 15 est ajouté ici ; Angular prévient au build que ce n'est pas officiellement pris en charge.
+# Les quelques fonctions manquantes d'iOS 15.0-15.3 sont ajoutées par src/polyfills.ts.
+last 2 Chrome versions
+last 2 Firefox versions
+last 2 Edge versions
+last 2 Safari major versions
+last 2 iOS major versions
+Firefox ESR
+iOS >= 15
+Safari >= 15
