@@ -81,7 +81,18 @@ https://<id-du-projet>.web.app/?cle=VMgkUrmfd6r0nNB4RdSrow
 
 Une seule app, une clé par chorale. Chaque chorale a ses morceaux, ses audios et son « À classer » ; un choriste ne voit que les chorales dont il a ouvert le lien. Un même téléphone peut être dans plusieurs chorales : son nom devient alors un menu, en haut de l'app, pour passer de l'une à l'autre. Les chorales sont numérotées : la chorale d'origine est la `1`.
 
-**Créer une chorale** (5 minutes, dans la console Firebase) :
+**Créer une chorale** : par le script (fiche, clé au hasard et lien affiché) :
+
+```bash
+node scripts/creer-chorale.mjs 6 --production
+node scripts/creer-chorale.mjs 6 --nom "Chorale du jeudi" --chef Anne --production
+```
+
+Sans `--nom` ni `--chef`, la chorale s'appelle « Chorale 6 » et son chef « Seb ». Une chorale qui existe déjà n'est pas touchée. Sans `--production`, le script travaille sur les émulateurs. Identifiants en production : la clé de compte de service de `GOOGLE_APPLICATION_CREDENTIALS` si elle est définie, sinon la connexion à la CLI Firebase de ce PC (`npx firebase login`), le temps du script (voir `scripts/admin.mjs`).
+
+Chorales créées le 10 novembre 2026 : `1` (On chante quoi ?) et `2` à `5` (« Chorale 2 » à « Chorale 5 », chef Seb). Pour changer un nom ou un chef : console Firebase › Firestore › `choirs` › le numéro › champs `name` et `teacher`.
+
+Ou à la main, dans la console Firebase :
 
 1. **Firestore** › collection `choirs` › *Ajouter un document* : ID = le numéro suivant (`2`), champs `name` (texte, le nom affiché, par exemple « Chorale du jeudi ») et `teacher` (texte, le prénom du chef de chœur : « Voix annoncée par … »).
 2. **Firestore** › collection `keys` › *Ajouter un document* : ID = une clé secrète (même format que ci-dessus), champs `note` (texte) et `choir` (texte) = `2`.
@@ -94,15 +105,12 @@ Une clé sans champ `choir` ouvre la chorale `1`, et un lien sans `&c=` aussi : 
 Les données de la chorale d'origine sont recopiées de `songs`, `files` et `audio/{sha256}` vers `choirs/1/songs`, `choirs/1/files` et `audio/1/{sha256}`. Dans l'ordre :
 
 1. **Règles de transition** : `npx firebase deploy --only firestore,storage` (dans un terminal interactif : répondre **Y** à la question sur le rôle IAM, voir l'étape 8 de la mise en ligne). Elles acceptent les anciens et les nouveaux emplacements : les téléphones qui ont encore l'ancienne version continuent de marcher.
-2. **Copie** : créez une clé de compte de service (*Paramètres du projet* › *Comptes de service* › *Générer une nouvelle clé privée*, fichier à garder hors du dossier du projet), puis :
-   ```powershell
-   $env:GOOGLE_APPLICATION_CREDENTIALS = "C:\chemin\vers\la-cle.json"
-   node scripts/migrer-multi-chorales.mjs --production
-   ```
-   Le script ne supprime rien et n'écrase rien ; il affiche à la fin les éventuels écarts. Sans `--production`, il travaille sur les émulateurs (c'est ainsi qu'il est testé : `npm run test:migration`).
+2. **Copie** : `node scripts/migrer-multi-chorales.mjs --production` (mêmes identifiants que `creer-chorale.mjs`). Le script ne supprime rien et n'écrase rien ; il affiche à la fin les éventuels écarts. Sans `--production`, il travaille sur les émulateurs (c'est ainsi qu'il est testé : `npm run test:migration`).
 3. **Nouvelle version** : `npm run deploy` (app et fonction `depot`). Les téléphones affichent le bandeau « nouvelle version ».
 4. **Relancer la copie** (même commande) : elle reprend ce qu'une ancienne version aurait encore déposé entre-temps.
 5. **Plus tard** (une ou deux semaines) : retirer des règles les blocs marqués « Transition », puis supprimer les anciennes données dans la console.
+
+Fait en production le 10 novembre 2026 (étapes 1 à 4 : 22 morceaux, 63 fichiers et 63 audios copiés, sans écart). L'étape 5 reste à faire.
 
 ---
 

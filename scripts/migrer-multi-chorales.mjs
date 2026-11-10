@@ -7,14 +7,10 @@
 // Relançable : ce qui existe déjà à la destination n'est jamais écrasé. Rien n'est supprimé.
 //
 // Émulateurs (par défaut) :   npm run emulators   puis   node scripts/migrer-multi-chorales.mjs
-// Production (Hubert, après l'essai sur les émulateurs) :
-//   $env:GOOGLE_APPLICATION_CREDENTIALS = "C:\chemin\cle-compte-de-service.json"
-//   node scripts/migrer-multi-chorales.mjs --production
-import { createRequire } from 'node:module';
+// Production (après l'essai sur les émulateurs) : node scripts/migrer-multi-chorales.mjs --production
+//   (identifiants : voir scripts/admin.mjs)
 import { pathToFileURL } from 'node:url';
-
-// firebase-admin est installé avec la fonction depot (npm run install:functions)
-const require = createRequire(new URL('../functions/package.json', import.meta.url));
+import { adminApp } from './admin.mjs';
 
 const CHOIR = '1';
 const HASH = /^[0-9a-f]{64}$/;
@@ -93,27 +89,7 @@ export async function check({ db, bucket, log = console.log }) {
 }
 
 async function main() {
-  const production = process.argv.includes('--production');
-  const projectId = production ? 'onchantequoi' : 'demo-chorale';
-  if (!production) {
-    process.env.FIRESTORE_EMULATOR_HOST ??= '127.0.0.1:8080';
-    process.env.FIREBASE_STORAGE_EMULATOR_HOST ??= '127.0.0.1:9199';
-    console.log('Émulateurs (projet demo-chorale). Pour la production : --production');
-  } else {
-    delete process.env.FIRESTORE_EMULATOR_HOST;
-    delete process.env.FIREBASE_STORAGE_EMULATOR_HOST;
-    console.log('PRODUCTION : projet onchantequoi');
-  }
-  const { initializeApp, applicationDefault } = require('firebase-admin/app');
-  const { getFirestore } = require('firebase-admin/firestore');
-  const { getStorage } = require('firebase-admin/storage');
-  const app = initializeApp({
-    projectId,
-    storageBucket: production ? 'onchantequoi.firebasestorage.app' : 'demo-chorale.appspot.com',
-    ...(production ? { credential: applicationDefault() } : {}),
-  });
-  const db = getFirestore(app);
-  const bucket = getStorage(app).bucket();
+  const { db, bucket } = adminApp();
   await migrate({ db, bucket });
   const gaps = await check({ db, bucket });
   if (gaps.length) {
